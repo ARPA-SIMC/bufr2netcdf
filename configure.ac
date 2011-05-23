@@ -33,7 +33,7 @@ else
 fi
 
 dnl Check for wreport
-PKG_CHECK_MODULES(WREPORT, [libwreport>=1.7]) 
+PKG_CHECK_MODULES(WREPORT, [libwreport >= 1.7]) 
 
 LIBS="$LIBS -lm"
 
