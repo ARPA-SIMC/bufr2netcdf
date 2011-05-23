@@ -1,0 +1,7 @@
+#!/bin/bash
+
+TOP_SRCDIR=$(readlink -f $(dirname $0))
+
+export PATH="$TOP_SRCDIR/src:$PATH"
+
+exec "$@"
