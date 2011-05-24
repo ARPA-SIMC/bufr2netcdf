@@ -27,15 +27,18 @@ dnl Check for wibble
 PKG_CHECK_EXISTS([libwibble], [have_wibble=yes], [have_wibble=no])
 if test x$have_wibble = xyes
 then
-	PKG_CHECK_MODULES(WIBBLE,libwibble)
-	enable_tests=yes
+    PKG_CHECK_MODULES(WIBBLE,libwibble)
+    enable_tests=yes
 else
-	AC_MSG_WARN([libwibble not found, tests will be disabled])
-	enable_tests=no
+    AC_MSG_WARN([libwibble not found, tests will be disabled])
+    enable_tests=no
 fi
 
 dnl Check for wreport
-PKG_CHECK_MODULES(WREPORT, [libwreport >= 1.7]) 
+PKG_CHECK_MODULES(WREPORT, [libwreport >= 1.7])
+
+dnl Check for NetCDF
+PKG_CHECK_MODULES(NC, [netcdf])
 
 LIBS="$LIBS -lm"
 

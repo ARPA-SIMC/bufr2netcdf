@@ -20,12 +20,24 @@
  */
 
 #include "convert.h"
+#include <wreport/bulletin.h>
+
+using namespace wreport;
+using namespace std;
 
 namespace b2nc {
 
-void Converter::convert(FILE* in, NcFile& out)
+void Converter::convert(FILE* in, int outncid)
 {
-    // TODO
+    string rawmsg;
+    BufrBulletin bulletin;
+
+    while (BufrBulletin::read(in, rawmsg /* , fname = 0 */))
+    {
+        // Decode the BUFR message
+        bulletin.decode(rawmsg);
+        // TODO
+    }
 }
 
 }

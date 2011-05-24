@@ -7,6 +7,7 @@ CMD=`pwd`/"$1"
 # Set up the test environment
 #
 
+export B2NC_TESTDATA=$TOP_SRCDIR/test
 TESTDIR="`mktemp -d`"
 cd "$TESTDIR"
 

@@ -34,7 +34,7 @@ class Converter
     /**
      * Convert a stream of BUFR messages to one NetCDF file
      */
-    void convert(FILE* in, NcFile& out);
+    void convert(FILE* in, int outncid);
 };
 
 }
