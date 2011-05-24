@@ -31,6 +31,8 @@ namespace b2nc {
  */
 class Converter
 {
+public:
+
     /**
      * Convert a stream of BUFR messages to one NetCDF file
      */

@@ -8,6 +8,7 @@ CMD=`pwd`/"$1"
 #
 
 export B2NC_TESTDATA=$TOP_SRCDIR/test
+export B2NC_NCCMP=$TOP_SRCDIR/src/nccmp/nccmp
 TESTDIR="`mktemp -d`"
 cd "$TESTDIR"
 

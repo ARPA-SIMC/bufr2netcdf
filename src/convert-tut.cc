@@ -21,10 +21,14 @@
 #include "utils.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
+#include <wibble/string.h>
+#include <wibble/sys/fs.h>
 #include <netcdf.h>
+#include <cstdlib>
 
-using namespace wreport;
 using namespace b2nc;
+using namespace wreport;
+using namespace wibble;
 using namespace std;
 
 namespace tut {
@@ -45,13 +49,17 @@ struct Convtest
 {
     string srcfile;
     string resfile;
+    string tmpfile;
     FILE* infd;
     int outncid;
 
     Convtest(const char* testname)
-        srcfile(tests::datafile("bufr/cdfin_acars")),
-        resfile(tests::datafile("netcdf/cdfin_acars")),
-        infd(NULL), outncid(-1)
+        : srcfile(b2nc::tests::datafile("bufr/cdfin_acars")),
+          resfile(b2nc::tests::datafile("netcdf/cdfin_acars")),
+          // We are run in a known temp dir, so we can hardcode the temporary
+          // file name
+          tmpfile("tmpfile.nc"),
+          infd(NULL), outncid(-1)
     {
         // Open input file
         infd = fopen(srcfile.c_str(), "rb");
@@ -59,14 +67,50 @@ struct Convtest
             error_system::throwf("cannot open %s", srcfile.c_str());
 
         // Create output file
-        int res = nc_create("tmpfile.nc", NC_CLOBBER, &outncid);
-        error_netcdf::throwf_iferror(res, "Creating file tmpfile.nc");
+        int res = nc_create(tmpfile.c_str(), NC_CLOBBER, &outncid);
+        error_netcdf::throwf_iferror(res, "Creating file %s", tmpfile.c_str());
     }
 
     ~Convtest()
     {
         if (infd != NULL)
             fclose(infd);
+        if (outncid != -1)
+            nc_close(outncid);
+    }
+
+    void convert()
+    {
+        // Perform the conversion
+        Converter conv;
+        conv.convert(infd, outncid);
+
+        // Close files
+        fclose(infd);
+        infd = NULL;
+        int res = nc_close(outncid);
+        error_netcdf::throwf_iferror(res, "Closing file %s", tmpfile.c_str());
+        outncid = -1;
+
+        // Compare results
+        const char* nccmp = getenv("B2NC_NCCMP");
+        ensure(nccmp);
+        ensure(sys::fs::access(nccmp, X_OK));
+        string cmd = str::fmtf("%s -d -m -g %s %s 2>&1", nccmp, resfile.c_str(), tmpfile.c_str());
+        char line[1024];
+        FILE* cmpres = popen(cmd.c_str(), "r");
+        if (cmpres == NULL)
+            error_system::throwf("opening pipe from \"%s\"", cmd.c_str());
+        bool has_errors = false;
+        while (fgets(line, 1024, cmpres) != NULL)
+        {
+            fprintf(stderr, "%s", line);
+            has_errors = true;
+        }
+        if (!feof(cmpres))
+            error_system::throwf("reading from \"%s\"", cmd.c_str());
+        ensure_equals(pclose(cmpres), 0);
+        ensure(!has_errors);
     }
 };
 
@@ -74,10 +118,7 @@ template<> template<>
 void to::test<1>()
 {
     Convtest t("cdfin_acars");
-
-    Converter conv;
-
-    conv.convert(t.infd, NcFile& out);
+    t.convert();
 }
 
 // TODO   cdfin_acars_uk

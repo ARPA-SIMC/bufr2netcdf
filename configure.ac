@@ -45,14 +45,12 @@ LIBS="$LIBS -lm"
 confdir='${sysconfdir}'"/$PACKAGE"
 AC_SUBST(confdir)
 
-CFLAGS="-Wall -Werror $CFLAGS"
-CXXFLAGS="-Wall -Werror $CFLAGS"
-
 AM_CONDITIONAL([DO_TESTS], [test x"$enable_tests" = x"yes"])
 
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
+src/nccmp/Makefile
 ])
 AC_OUTPUT
 

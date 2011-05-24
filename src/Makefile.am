@@ -1,6 +1,12 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES = $(WREPORT_CFLAGS)
+SUBDIRS = nccmp .
+
+CFLAGS += -Wall -Werror
+CXXFLAGS += -Wall -Werror
+
+
+INCLUDES = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NC_CFLAGS)
 
 #
 # Convenience library with conversion code
@@ -25,6 +31,10 @@ bufr2netcdf_LDADD = libb2nc.la $(NC_LIBS) $(WREPORT_LIBS)
 
 if DO_TESTS
 
+#
+# Unit tests
+#
+
 check_PROGRAMS = tut_test
 TESTS_ENVIRONMENT = $(top_srcdir)/runtest
 TESTS = $(check_PROGRAMS)
@@ -34,6 +44,7 @@ CXXFLAGS += -O0
 noinst_HEADERS += tests/tests.h
 
 tut_test_SOURCES = \
+	convert-tut.cc \
 	tests/tests.cc \
 	tests/tut-main.cpp
 tut_test_LDADD = \
