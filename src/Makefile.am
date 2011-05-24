@@ -2,10 +2,22 @@
 
 INCLUDES = $(WREPORT_CFLAGS)
 
-bin_PROGRAMS = bufr2netcdf
+#
+# Convenience library with conversion code
+#
 
+noinst_HEADERS = convert.h
+
+noinst_LTLIBRARIES = libb2nc.la
+libb2nc_la_SOURCES = convert.cc
+
+#
+# Conversion tool
+#
+
+bin_PROGRAMS = bufr2netcdf
 bufr2netcdf_SOURCES = bufr2netcdf.cc
-bufr2netcdf_LDADD = $(WREPORT_LIBS)
+bufr2netcdf_LDADD = libb2nc.la $(WREPORT_LIBS)
 
 #
 # Unit testing
@@ -19,11 +31,12 @@ TESTS = $(check_PROGRAMS)
 
 CXXFLAGS += -O0
 
-noinst_HEADERS = tests/tests.h
+noinst_HEADERS += tests/tests.h
 
 tut_test_SOURCES = \
 	tests/tut-main.cpp
 tut_test_LDADD = \
+	libb2nc.la
 	$(WREPORT_LIBS) \
 	$(WIBBLE_LIBS)
 
