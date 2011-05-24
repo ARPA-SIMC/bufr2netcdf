@@ -4,4 +4,4 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = src .
 
-EXTRA_DIST = run-local
+EXTRA_DIST = run-local runtest
