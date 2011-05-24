@@ -53,9 +53,9 @@ struct Convtest
     FILE* infd;
     int outncid;
 
-    Convtest(const char* testname)
-        : srcfile(b2nc::tests::datafile("bufr/cdfin_acars")),
-          resfile(b2nc::tests::datafile("netcdf/cdfin_acars")),
+    Convtest(const std::string& testname)
+        : srcfile(b2nc::tests::datafile("bufr/" + testname)),
+          resfile(b2nc::tests::datafile("netcdf/" + testname)),
           // We are run in a known temp dir, so we can hardcode the temporary
           // file name
           tmpfile("tmpfile.nc"),
@@ -121,20 +121,103 @@ void to::test<1>()
     t.convert();
 }
 
-// TODO   cdfin_acars_uk
-// TODO   cdfin_acars_us
-// TODO   cdfin_amdar
-// TODO   cdfin_buoy
-// TODO   cdfin_gps_zenith
-// TODO   cdfin_pilot
-// TODO   cdfin_pilot_p
-// TODO   cdfin_radar_vad
-// TODO   cdfin_rass
-// TODO   cdfin_ship
-// TODO   cdfin_synop
-// TODO   cdfin_temp
-// TODO   cdfin_tempship
-// TODO   cdfin_wprof
+template<> template<>
+void to::test<2>()
+{
+    Convtest t("cdfin_acars_uk");
+    t.convert();
+}
+
+template<> template<>
+void to::test<3>()
+{
+    Convtest t("cdfin_acars_us");
+    t.convert();
+}
+
+template<> template<>
+void to::test<4>()
+{
+    Convtest t("cdfin_amdar");
+    t.convert();
+}
+
+template<> template<>
+void to::test<5>()
+{
+    Convtest t("cdfin_buoy");
+    t.convert();
+}
+
+template<> template<>
+void to::test<6>()
+{
+    //Convtest t("cdfin_gps_zenith");
+    //t.convert();
+}
+
+template<> template<>
+void to::test<7>()
+{
+    Convtest t("cdfin_pilot");
+    t.convert();
+}
+
+template<> template<>
+void to::test<8>()
+{
+    Convtest t("cdfin_pilot_p");
+    t.convert();
+}
+
+template<> template<>
+void to::test<9>()
+{
+    Convtest t("cdfin_radar_vad");
+    t.convert();
+}
+
+template<> template<>
+void to::test<10>()
+{
+    Convtest t("cdfin_rass");
+    t.convert();
+}
+
+template<> template<>
+void to::test<11>()
+{
+    Convtest t("cdfin_ship");
+    t.convert();
+}
+
+template<> template<>
+void to::test<12>()
+{
+    Convtest t("cdfin_synop");
+    t.convert();
+}
+
+template<> template<>
+void to::test<13>()
+{
+    Convtest t("cdfin_temp");
+    t.convert();
+}
+
+template<> template<>
+void to::test<14>()
+{
+    Convtest t("cdfin_tempship");
+    t.convert();
+}
+
+template<> template<>
+void to::test<15>()
+{
+    Convtest t("cdfin_wprof");
+    t.convert();
+}
 
 }
 
