@@ -24,6 +24,7 @@
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
 #include <netcdf.h>
+#include <cstring>
 
 using namespace wreport;
 using namespace std;
@@ -88,15 +89,20 @@ struct SingleValArray : public ValArray
         Varinfo info = vars[0].info();
         if (info->is_string())
         {
-            /*
-            string dimname = name + "_strlen";
-            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
-            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
-            ++ndims;
-            type = NC_CHAR;
-             int nc_put_vara_text  (int ncid, int varid, const size_t start[],
-                                                 const size_t count[], const char *tp);
-                                                 */
+            size_t start[] = {0, 0};
+            size_t count[] = {1, info->len};
+            char missing[info->len]; // Missing value
+            memset(missing, NC_FILL_CHAR, info->len);
+            for (size_t i = 0; i < vars.size(); ++i)
+            {
+                int res;
+                start[0] = i;
+                if (vars[i].isset())
+                    res = nc_put_vara_text(ncid, nc_varid, start, count, vars[i].value());
+                else
+                    res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
+                error_netcdf::throwf_iferror(res, "storing %zd string values", vars.size());
+            }
         }
         else if (info->scale == 0)
         {
