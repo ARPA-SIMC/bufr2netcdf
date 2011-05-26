@@ -66,9 +66,27 @@ static void read_bufr(Arrays& a, const std::string& testname)
 template<> template<>
 void to::test<1>()
 {
+    const Var* var;
     Arrays arrays;
     read_bufr(arrays, "cdfin_acars");
-    arrays.dump(stderr);
+
+    ensure_equals(arrays.arrays.size(), 39u);
+    ensure_equals(arrays.arrays[0]->name, "TODO_B01033_000");
+    ensure_equals(arrays.arrays[0]->get_size(0), 133);
+    ensure_equals(arrays.arrays[4]->name, "TODO_B05001_000");
+    ensure_equals(arrays.arrays[4]->get_size(0), 133);
+    ensure_equals(arrays.arrays[38]->name, "TODO_B33026_000");
+    ensure_equals(arrays.arrays[38]->get_size(0), 133);
+
+    var = arrays.arrays[4]->get_var(0, 0);
+    ensure(var != NULL);
+    ensure_equals(var->enqd(), 48.45500);
+
+    var = arrays.arrays[4]->get_var(0, 132);
+    ensure(var != NULL);
+    ensure_equals(var->enqd(), 46.16833);
+
+    //arrays.dump(stderr);
 }
 
 }

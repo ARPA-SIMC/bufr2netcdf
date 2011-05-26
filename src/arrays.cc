@@ -37,7 +37,19 @@ struct SingleValArray : public ValArray
         vars.push_back(Var(var, false));
     }
 
-    virtual void dump(FILE* out)
+    const Var* get_var(unsigned nesting, unsigned pos) const
+    {
+        if (nesting > 0) return NULL;
+        if (pos >= vars.size()) return NULL;
+        return &vars[pos];
+    }
+    size_t get_size(unsigned nesting) const
+    {
+        if (nesting > 0) return 0;
+        return vars.size();
+    }
+
+    void dump(FILE* out)
     {
         for (size_t i = 0; i < vars.size(); ++i)
         {
@@ -60,7 +72,20 @@ struct MultiValArray : public ValArray
         arrs[nesting].add(var);
     }
 
-    virtual void dump(FILE* out)
+    const Var* get_var(unsigned nesting, unsigned pos) const
+    {
+        if (nesting >= arrs.size()) return NULL;
+        if (pos >= arrs[nesting].vars.size()) return NULL;
+        return &arrs[nesting].vars[pos];
+    }
+
+    size_t get_size(unsigned nesting) const
+    {
+        if (nesting >= arrs.size()) return 0;
+        return arrs[nesting].vars.size();
+    }
+
+    void dump(FILE* out)
     {
         for (size_t a = 0; a < arrs.size(); ++a)
             for (size_t i = 0; i < arrs[1].vars.size(); ++i)
