@@ -121,7 +121,7 @@ public:
     virtual void push_repetition(unsigned length, unsigned count)
     {
         ++rep_nesting;
-        while (rep_nesting <= rep_stack.size())
+        while (rep_nesting >= rep_stack.size())
             rep_stack.push_back(0u);
         ++(rep_stack[rep_nesting]);
         update_tag();
