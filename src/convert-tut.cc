@@ -45,6 +45,8 @@ struct convert_shar
 };
 TESTGRP(convert);
 
+namespace {
+
 struct Convtest
 {
     string srcfile;
@@ -113,6 +115,8 @@ struct Convtest
         ensure(!has_errors);
     }
 };
+
+}
 
 template<> template<>
 void to::test<1>()
