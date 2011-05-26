@@ -1,5 +1,5 @@
 /*
- * convert - Convert a stream of BUFR messages to one single NetCDF file
+ * arrays - Aggregate multiple BUFR contents into data arrays
  *
  * Copyright (C) 2011  ARPA-SIM <urpsim@smr.arpa.emr.it>
  *
@@ -19,32 +19,43 @@
  * Author: Enrico Zini <enrico@enricozini.com>
  */
 
-#include "convert.h"
-#include "arrays.h"
-#include <wreport/bulletin.h>
-#include <map>
-#include <vector>
+#ifndef B2NC_ARRAYS_H
+#define B2NC_ARRAYS_H
 
-using namespace wreport;
-using namespace std;
+#include "namer.h"
+#include <string>
+#include <vector>
+#include <map>
+
+namespace wreport {
+struct Var;
+struct Bulletin;
+}
 
 namespace b2nc {
 
-void Converter::convert(FILE* in, int outncid)
+struct ValArray
 {
-    string rawmsg;
-    BufrBulletin bulletin;
+    std::string name;
 
-    Arrays arrays;
-    while (BufrBulletin::read(in, rawmsg /* , fname = 0 */))
-    {
-        // Decode the BUFR message
-        bulletin.decode(rawmsg);
-        // TODO: if first, build metadata
-        // Add contents to the various data arrays
-        arrays.add(bulletin);
-    }
-    // TODO: add arrays to NetCDF
+    virtual ~ValArray() {}
+    virtual void add(const wreport::Var& var, unsigned nesting=0) = 0;
+};
+
+struct Arrays
+{
+    Namer* namer;
+    std::vector<ValArray*> arrays;
+    std::map<std::string, unsigned> byname;
+
+    Arrays(Namer::Type type = Namer::PLAIN);
+    ~Arrays();
+
+    ValArray& get_valarray(const wreport::Var& var, unsigned nesting = 0);
+    void add(const wreport::Bulletin& bulletin);
+};
+
 }
 
-}
+#endif
+

@@ -12,10 +12,10 @@ INCLUDES = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NC_CFLAGS)
 # Convenience library with conversion code
 #
 
-noinst_HEADERS = convert.h namer.h utils.h
+noinst_HEADERS = arrays.h convert.h namer.h utils.h
 
 noinst_LTLIBRARIES = libb2nc.la
-libb2nc_la_SOURCES = utils.cc namer.cc convert.cc
+libb2nc_la_SOURCES = utils.cc namer.cc arrays.cc convert.cc
 
 #
 # Conversion tool
@@ -45,6 +45,7 @@ noinst_HEADERS += tests/tests.h
 
 tut_test_SOURCES = \
 	namer-tut.cc \
+	arrays-tut.cc \
 	convert-tut.cc \
 	tests/tests.cc \
 	tests/tut-main.cpp
