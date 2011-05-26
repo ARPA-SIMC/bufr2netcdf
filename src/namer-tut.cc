@@ -44,8 +44,10 @@ void to::test<1>()
 {
     auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
 
-    //Convtest t("cdfin_acars");
-    //t.convert();
+    ensure_equals(n->name(WR_VAR(0, 1, 2)), "TODO_B01002_000");
+    ensure_equals(n->name(WR_VAR(0, 1, 2)), "TODO_B01002_001");
+    ensure_equals(n->name(WR_VAR(0, 1, 2), true), "TODO_B01002_002");
+    ensure_equals(n->name(WR_VAR(0, 1, 2), true), "TODO_B01002_002");
 }
 
 }

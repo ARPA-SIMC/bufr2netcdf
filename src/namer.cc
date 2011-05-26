@@ -55,10 +55,9 @@ public:
         unsigned index;
 
         std::map<Varcode, int>::iterator i = get_seen_count(code);
-        if (nested)
-            index = i->second;
-        else
-            index = ++(i->second);
+        index = i->second;
+        if (!nested)
+            ++(i->second);
 
         char buf[20];
         snprintf(buf, 20, "%s_%c%02d%03d_%03d",
