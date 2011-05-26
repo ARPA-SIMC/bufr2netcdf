@@ -20,6 +20,7 @@
  */
 
 #include "convert.h"
+#include "namer.h"
 #include <wreport/bulletin.h>
 #include <map>
 
@@ -27,64 +28,6 @@ using namespace wreport;
 using namespace std;
 
 namespace b2nc {
-
-struct Namer
-{
-    virtual ~Namer() {}
-
-    /**
-     * Get a name for a variable
-     *
-     * @params code
-     *   The variable code
-     * @params nested
-     *   True if the variable is seen inside a nested loop, false if it is at
-     *   the top level of the BUFR message
-     */
-    virtual std::string name(Varcode code, bool nested=false) = 0;
-};
-
-/**
- * Type_FXXYYY_RRR style namer
- */
-class PlainNamer : public Namer
-{
-protected:
-    std::map<Varcode, int> seen_count;
-
-    std::map<Varcode, int>::iterator get_seen_count(Varcode code)
-    {
-        std::map<Varcode, int>::iterator i = seen_count.find(code);
-        if (i != seen_count.end()) return i;
-
-        pair< std::map<Varcode, int>::iterator, bool > r = seen_count.insert(make_pair(code, 0));
-        return r.first;
-    }
-
-public:
-
-    virtual std::string name(Varcode code, bool nested=false)
-    {
-        const char* type = "TODO";
-        string fcode = varcode_format(code);
-        unsigned index;
-
-        std::map<Varcode, int>::iterator i = get_seen_count(code);
-        if (nested)
-            index = i->second;
-        else
-            index = ++(i->second);
-
-        char buf[20];
-        snprintf(buf, 20, "%s_%c%02d%03d_%03d",
-                type,
-                "BRCD"[WR_VAR_F(code)],
-                WR_VAR_X(code),
-                WR_VAR_Y(code),
-                index);
-        return buf;
-    }
-};
 
 struct ValArray
 {
@@ -120,13 +63,21 @@ struct MultiValArray : public ValArray
 
 struct Arrays
 {
-    PlainNamer namer;
+    Namer* namer;
     vector<ValArray*> arrays;
     map<string, unsigned> byname;
 
+    Arrays(Namer::Type type = Namer::PLAIN)
+        : namer(Namer::get(type)) {}
+
+    ~Arrays()
+    {
+        delete namer;
+    }
+
     ValArray& get_valarray(const Var& var, unsigned nesting = 0)
     {
-        string name = namer.name(var.code(), nesting > 0);
+        string name = namer->name(var.code(), nesting > 0);
 
         map<string, unsigned>::const_iterator i = byname.find(name);
         if (i != byname.end())
