@@ -20,8 +20,10 @@
  */
 
 #include "arrays.h"
+#include "utils.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
+#include <netcdf.h>
 
 using namespace wreport;
 using namespace std;
@@ -47,6 +49,28 @@ struct SingleValArray : public ValArray
     {
         if (nesting > 0) return 0;
         return vars.size();
+    }
+
+    int define(int ncid, int bufrdim) const
+    {
+        // Skip variable if it's never been found
+        if (vars.empty())
+            return -1;
+
+        int dims[1] = { bufrdim };
+        int resid;
+        nc_type type;
+        Varinfo info = vars[0].info();
+        if (info->is_string())
+            // TODO: add extra dim
+            type = NC_CHAR;
+        else if (info->scale == 0)
+            type = NC_INT;
+        else
+            type = NC_FLOAT; // TODO: why not double?
+        int res = nc_def_var(ncid, name.c_str(), type, 1, dims, &resid);
+        error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+        return resid;
     }
 
     void dump(FILE* out)
@@ -83,6 +107,12 @@ struct MultiValArray : public ValArray
     {
         if (nesting >= arrs.size()) return 0;
         return arrs[nesting].vars.size();
+    }
+
+    int define(int ncid, int bufrdim) const
+    {
+        // TODO
+        return -1;
     }
 
     void dump(FILE* out)

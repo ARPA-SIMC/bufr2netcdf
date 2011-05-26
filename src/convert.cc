@@ -21,9 +21,11 @@
 
 #include "convert.h"
 #include "arrays.h"
+#include "utils.h"
 #include <wreport/bulletin.h>
 #include <map>
 #include <vector>
+#include <netcdf.h>
 
 using namespace wreport;
 using namespace std;
@@ -44,7 +46,27 @@ void Converter::convert(FILE* in, int outncid)
         // Add contents to the various data arrays
         arrays.add(bulletin);
     }
+
     // TODO: add arrays to NetCDF
+    int res;
+
+    int dim_bufr_records;
+    res = nc_def_dim(outncid, "BUFR_records", NC_UNLIMITED, &dim_bufr_records);
+    error_netcdf::throwf_iferror(res, "creating BUFR_records dimension for file %s", "##TODO##");
+
+    for (std::vector<ValArray*>::const_iterator i = arrays.arrays.begin();
+            i != arrays.arrays.end(); ++i)
+    {
+        /* int id = */ (*i)->define(outncid, dim_bufr_records);
+    }
+
+    // TODO nc_put_att       /* put attribute: assign attribute values */
+
+    // End define mode
+    res = nc_enddef(outncid);
+    error_netcdf::throwf_iferror(res, "leaving define mode for file %s", "##TODO##");
+
+    // TODO nc_put_var       /* provide values for variables */
 }
 
 }

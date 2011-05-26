@@ -45,6 +45,8 @@ struct ValArray
     virtual const wreport::Var* get_var(unsigned nesting, unsigned pos) const = 0;
     virtual size_t get_size(unsigned nesting) const = 0;
 
+    virtual int define(int ncid, int bufrdim) const = 0;
+
     virtual void dump(FILE* out) = 0;
 };
 
