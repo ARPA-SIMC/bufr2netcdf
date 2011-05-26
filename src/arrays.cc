@@ -57,13 +57,19 @@ struct SingleValArray : public ValArray
         if (vars.empty())
             return -1;
 
-        int dims[1] = { bufrdim };
+        int dims[2] = { bufrdim, 0 };
+        int ndims = 1;
         int resid;
         nc_type type;
         Varinfo info = vars[0].info();
         if (info->is_string())
-            // TODO: add extra dim
+        {
+            string dimname = name + "_strlen";
+            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
+            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
+            ++ndims;
             type = NC_CHAR;
+        }
         else if (info->scale == 0)
             type = NC_INT;
         else
