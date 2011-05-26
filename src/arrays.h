@@ -38,6 +38,7 @@ namespace b2nc {
 struct ValArray
 {
     std::string name;
+    int nc_varid;
 
     virtual ~ValArray() {}
     virtual void add(const wreport::Var& var, unsigned nesting=0) = 0;
@@ -45,7 +46,8 @@ struct ValArray
     virtual const wreport::Var* get_var(unsigned nesting, unsigned pos) const = 0;
     virtual size_t get_size(unsigned nesting) const = 0;
 
-    virtual int define(int ncid, int bufrdim) const = 0;
+    virtual bool define(int ncid, int bufrdim) = 0;
+    virtual void putvar(int ncid) const = 0;
 
     virtual void dump(FILE* out) = 0;
 };

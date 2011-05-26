@@ -66,7 +66,11 @@ void Converter::convert(FILE* in, int outncid)
     res = nc_enddef(outncid);
     error_netcdf::throwf_iferror(res, "leaving define mode for file %s", "##TODO##");
 
-    // TODO nc_put_var       /* provide values for variables */
+    for (std::vector<ValArray*>::const_iterator i = arrays.arrays.begin();
+            i != arrays.arrays.end(); ++i)
+    {
+        (*i)->putvar(outncid);
+    }
 }
 
 }

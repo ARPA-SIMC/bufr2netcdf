@@ -51,15 +51,17 @@ struct SingleValArray : public ValArray
         return vars.size();
     }
 
-    int define(int ncid, int bufrdim) const
+    bool define(int ncid, int bufrdim)
     {
         // Skip variable if it's never been found
         if (vars.empty())
-            return -1;
+        {
+            nc_varid = -1;
+            return false;
+        }
 
         int dims[2] = { bufrdim, 0 };
         int ndims = 1;
-        int resid;
         nc_type type;
         Varinfo info = vars[0].info();
         if (info->is_string())
@@ -74,9 +76,58 @@ struct SingleValArray : public ValArray
             type = NC_INT;
         else
             type = NC_FLOAT; // TODO: why not double?
-        int res = nc_def_var(ncid, name.c_str(), type, 1, dims, &resid);
+        int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
         error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
-        return resid;
+        return nc_varid;
+    }
+
+    void putvar(int ncid) const
+    {
+        if (vars.empty()) return;
+
+        Varinfo info = vars[0].info();
+        if (info->is_string())
+        {
+            /*
+            string dimname = name + "_strlen";
+            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
+            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
+            ++ndims;
+            type = NC_CHAR;
+             int nc_put_vara_text  (int ncid, int varid, const size_t start[],
+                                                 const size_t count[], const char *tp);
+                                                 */
+        }
+        else if (info->scale == 0)
+        {
+            size_t start[] = {0};
+            size_t count[] = {vars.size()};
+            int vals[vars.size()];
+            for (size_t i = 0; i < vars.size(); ++i)
+            {
+                if (vars[i].isset())
+                    vals[i] = vars[i].enqi();
+                else
+                    vals[i] = NC_FILL_INT;
+            }
+            int res = nc_put_vara_int(ncid, nc_varid, start, count, vals);
+            error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
+        }
+        else
+        {
+            size_t start[] = {0};
+            size_t count[] = {vars.size()};
+            float vals[vars.size()];
+            for (size_t i = 0; i < vars.size(); ++i)
+            {
+                if (vars[i].isset())
+                    vals[i] = vars[i].enqd();
+                else
+                    vals[i] = NC_FILL_FLOAT;
+            }
+            int res = nc_put_vara_float(ncid, nc_varid, start, count, vals);
+            error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
+        }
     }
 
     void dump(FILE* out)
@@ -115,10 +166,13 @@ struct MultiValArray : public ValArray
         return arrs[nesting].vars.size();
     }
 
-    int define(int ncid, int bufrdim) const
+    bool define(int ncid, int bufrdim)
     {
         // TODO
         return -1;
+    }
+    void putvar(int ncid) const
+    {
     }
 
     void dump(FILE* out)
