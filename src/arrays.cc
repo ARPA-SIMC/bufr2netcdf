@@ -89,6 +89,20 @@ protected:
 
     Arrays& arrays;
     unsigned rep_nesting;
+    std::vector<unsigned> rep_stack;
+    string tag;
+
+    void update_tag()
+    {
+        tag.clear();
+        for (unsigned i = 0; i < rep_nesting; ++i)
+        {
+            if (i != 0) tag += "_";
+            char buf[20];
+            snprintf(buf, 20, "%u", rep_stack[rep_nesting]);
+            tag += buf;
+        }
+    }
 
 public:
     ArrayBuilder(const Bulletin& bulletin, Arrays& arrays)
@@ -99,22 +113,35 @@ public:
         bulletin::ConstBaseDDSExecutor::start_subset(subset_no);
         if (rep_nesting != 0)
             error_consistency::throwf("At start of subset, rep_nesting is %u instead of 0", rep_nesting);
+        rep_stack.clear();
+        update_tag();
+        arrays.start(tag);
     }
 
     virtual void push_repetition(unsigned length, unsigned count)
     {
         ++rep_nesting;
+        while (rep_nesting <= rep_stack.size())
+            rep_stack.push_back(0u);
+        ++(rep_stack[rep_nesting]);
+        update_tag();
+    }
+
+    virtual void start_repetition()
+    {
+        arrays.start(tag);
     }
 
     virtual void pop_repetition()
     {
         --rep_nesting;
+        update_tag();
     }
 
     virtual void encode_var(Varinfo info, unsigned var_pos)
     {
         const Var& var = get_var(var_pos);
-        ValArray& arr = arrays.get_valarray(var);
+        ValArray& arr = arrays.get_valarray(var, tag);
         arr.add(var, rep_nesting);
 
         // TODO: encode attributes
@@ -137,9 +164,14 @@ Arrays::~Arrays()
     delete namer;
 }
 
-ValArray& Arrays::get_valarray(const Var& var, unsigned nesting)
+void Arrays::start(const std::string& tag)
 {
-    string name = namer->name(var.code(), nesting > 0);
+    namer->start(tag);
+}
+
+ValArray& Arrays::get_valarray(const Var& var, const std::string& tag)
+{
+    string name = namer->name(var.code(), tag);
 
     map<string, unsigned>::const_iterator i = byname.find(name);
     if (i != byname.end())
@@ -148,10 +180,10 @@ ValArray& Arrays::get_valarray(const Var& var, unsigned nesting)
 
     // Create a new array
     auto_ptr<ValArray> arr;
-    if (nesting)
-        arr.reset(new MultiValArray);
-    else
+    if (tag.empty())
         arr.reset(new SingleValArray);
+    else
+        arr.reset(new MultiValArray);
     arr->name = name;
     arrays.push_back(arr.release());
     byname[name] = arrays.size() - 1;

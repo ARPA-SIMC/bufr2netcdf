@@ -53,7 +53,9 @@ struct Arrays
     Arrays(Namer::Type type = Namer::PLAIN);
     ~Arrays();
 
-    ValArray& get_valarray(const wreport::Var& var, unsigned nesting = 0);
+    void start(const std::string& tag);
+    ValArray& get_valarray(const wreport::Var& var, const std::string& tag);
+
     void add(const wreport::Bulletin& bulletin);
 
     void dump(FILE* out);

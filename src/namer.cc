@@ -22,6 +22,7 @@
 #include "namer.h"
 #include <wreport/error.h>
 #include <map>
+#include <vector>
 #include <cstdio>
 
 using namespace wreport;
@@ -29,35 +30,89 @@ using namespace std;
 
 namespace b2nc {
 
+namespace {
+
+struct SeenCounter
+{
+    std::map<Varcode, unsigned> seen_count;
+
+    unsigned allocate(Varcode code)
+    {
+        std::map<Varcode, unsigned>::iterator i = seen_count.find(code);
+        if (i != seen_count.end())
+            return ++(i->second);
+        else
+        {
+            seen_count.insert(make_pair(code, 0));
+            return 0;
+        }
+    }
+};
+
+struct Counter
+{
+    SeenCounter& seen_counter;
+    std::vector< pair<Varcode, unsigned> > assigned;
+    unsigned pos;
+
+    Counter(SeenCounter& seen_counter) : seen_counter(seen_counter), pos(0) {}
+
+    void reset() { pos = 0; }
+
+    unsigned get_index(Varcode code)
+    {
+        unsigned index;
+        if (pos >= assigned.size())
+        {
+            // Allocate a new index
+            index = seen_counter.allocate(code);
+            assigned.push_back(make_pair(code, index));
+        } else {
+            // Reuse old index
+            const pair<Varcode, unsigned>& res = assigned[pos];
+            if (code != res.first)
+                // TODO: if this is how we report it, properly format varcodes
+                error_consistency::throwf("BUFR structure differs: expected %d found %d", res.first, code);
+            index = res.second;
+        }
+        ++pos;
+        return index;
+    }
+};
+
 /**
  * Type_FXXYYY_RRR style namer
  */
 class PlainNamer : public Namer
 {
 protected:
-    std::map<Varcode, int> seen_count;
+    SeenCounter seen_counter;
+    std::map<string, Counter> counters;
 
-    std::map<Varcode, int>::iterator get_seen_count(Varcode code)
+    Counter& get_counter(const std::string& tag)
     {
-        std::map<Varcode, int>::iterator i = seen_count.find(code);
-        if (i != seen_count.end()) return i;
-
-        pair< std::map<Varcode, int>::iterator, bool > r = seen_count.insert(make_pair(code, 0));
-        return r.first;
+        std::map<string, Counter>::iterator i = counters.find(tag);
+        if (i != counters.end())
+            return i->second;
+        pair<std::map<string, Counter>::iterator, bool> res = counters.insert(
+                make_pair(tag, Counter(seen_counter)));
+        return res.first->second;
     }
 
 public:
+    virtual void start(const std::string& tag)
+    {
+        get_counter(tag).reset();
+    }
 
-    virtual std::string name(Varcode code, bool nested=false)
+    virtual std::string name(Varcode code, const std::string& tag)
     {
         const char* type = "TODO";
         string fcode = varcode_format(code);
-        unsigned index;
 
-        std::map<Varcode, int>::iterator i = get_seen_count(code);
-        index = i->second;
-        if (!nested)
-            ++(i->second);
+        // Get/create counter for this tag
+        Counter& counter = get_counter(tag);
+        unsigned index = counter.get_index(code);
 
         char buf[20];
         snprintf(buf, 20, "%s_%c%02d%03d_%03d",
@@ -69,6 +124,9 @@ public:
         return buf;
     }
 };
+
+}
+
 
 auto_ptr<Namer> Namer::get(Type type)
 {

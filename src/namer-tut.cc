@@ -19,6 +19,7 @@
 
 #include "namer.h"
 #include <tests/tests.h>
+#include <wibble/string.h>
 
 using namespace b2nc;
 using namespace wreport;
@@ -27,27 +28,123 @@ using namespace std;
 
 namespace tut {
 
-struct namers_shar
+struct namer_shar
 {
-    namers_shar()
+    namer_shar()
     {
     }
 
-    ~namers_shar()
+    ~namer_shar()
     {
     }
 };
-TESTGRP(namers);
+TESTGRP(namer);
 
+// No repetition counts
 template<> template<>
 void to::test<1>()
 {
     auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
 
-    ensure_equals(n->name(WR_VAR(0, 1, 2)), "TODO_B01002_000");
-    ensure_equals(n->name(WR_VAR(0, 1, 2)), "TODO_B01002_001");
-    ensure_equals(n->name(WR_VAR(0, 1, 2), true), "TODO_B01002_002");
-    ensure_equals(n->name(WR_VAR(0, 1, 2), true), "TODO_B01002_002");
+    string tag = "";
+
+    for (int i = 0; i < 3; ++i)
+    {
+        try {
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_000");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_000");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_001");
+            ensure_equals(n->name(WR_VAR(0, 1, 3), tag), "TODO_B01003_000");
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_001");
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_002");
+        } catch (tut::failure& e) {
+            throw tut::failure(str::fmtf("%s (iteration %i)", e.what(), i));
+        }
+    }
+}
+
+// One simple repetition count
+template<> template<>
+void to::test<2>()
+{
+    auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+
+    for (int i = 0; i < 3; ++i)
+    {
+        try {
+            string tag = "";
+
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_000");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_001");
+
+            tag = "1";
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_002");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_003");
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_002");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_003");
+
+            tag = "";
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_004");
+        } catch (tut::failure& e) {
+            throw tut::failure(str::fmtf("%s (iteration %i)", e.what(), i));
+        }
+    }
+}
+
+// Multiple nested repetition counts
+template<> template<>
+void to::test<3>()
+{
+    auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+
+    for (int i = 0; i < 3; ++i)
+    {
+        try {
+            string tag = "";
+
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_000");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_000");
+
+            tag = "1";
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_001");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_001");
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_001");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_001");
+
+            tag = "";
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_002");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_002");
+
+            tag = "2";
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_003");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_003");
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_003");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_003");
+
+            tag = "2_1";
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_004");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_004");
+            n->start(tag);
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_004");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_004");
+
+            tag = "";
+            ensure_equals(n->name(WR_VAR(0, 1, 1), tag), "TODO_B01001_005");
+            ensure_equals(n->name(WR_VAR(0, 1, 2), tag), "TODO_B01002_005");
+        } catch (tut::failure& e) {
+            throw tut::failure(str::fmtf("%s (iteration %i)", e.what(), i));
+        }
+    }
 }
 
 }

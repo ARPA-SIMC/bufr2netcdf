@@ -38,6 +38,11 @@ struct Namer
     virtual ~Namer() {}
 
     /**
+     * Mark the beginning of the section with the given tag
+     */
+    virtual void start(const std::string& tag) = 0;
+
+    /**
      * Get a name for a variable
      *
      * @params code
@@ -46,7 +51,7 @@ struct Namer
      *   True if the variable is seen inside a nested loop, false if it is at
      *   the top level of the BUFR message
      */
-    virtual std::string name(wreport::Varcode code, bool nested=false) = 0;
+    virtual std::string name(wreport::Varcode code, const std::string& tag) = 0;
 
     /**
      * Get a namer by type.
