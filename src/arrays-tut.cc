@@ -19,6 +19,9 @@
 
 #include "arrays.h"
 #include <tests/tests.h>
+#include <wreport/error.h>
+#include <wreport/bulletin.h>
+#include <cstdio>
 
 using namespace b2nc;
 using namespace wreport;
@@ -39,9 +42,33 @@ struct arrays_shar
 };
 TESTGRP(arrays);
 
+static void read_bufr(Arrays& a, const std::string& testname)
+{
+    // Open input file
+    string srcfile(b2nc::tests::datafile("bufr/" + testname));
+    FILE* infd = fopen(srcfile.c_str(), "rb");
+    if (infd == NULL)
+        error_system::throwf("cannot open %s", srcfile.c_str());
+
+    string rawmsg;
+    BufrBulletin bulletin;
+    while (BufrBulletin::read(infd, rawmsg, srcfile.c_str()))
+    {
+        // Decode the BUFR message
+        bulletin.decode(rawmsg);
+        // Add contents to the various data arrays
+        a.add(bulletin);
+    }
+
+    fclose(infd);
+}
+
 template<> template<>
 void to::test<1>()
 {
+    Arrays arrays;
+    read_bufr(arrays, "cdfin_acars");
+    arrays.dump(stderr);
 }
 
 }

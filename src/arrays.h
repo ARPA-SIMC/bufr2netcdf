@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cstdio>
 
 namespace wreport {
 struct Var;
@@ -40,6 +41,7 @@ struct ValArray
 
     virtual ~ValArray() {}
     virtual void add(const wreport::Var& var, unsigned nesting=0) = 0;
+    virtual void dump(FILE* out) = 0;
 };
 
 struct Arrays
@@ -53,6 +55,8 @@ struct Arrays
 
     ValArray& get_valarray(const wreport::Var& var, unsigned nesting = 0);
     void add(const wreport::Bulletin& bulletin);
+
+    void dump(FILE* out);
 };
 
 }

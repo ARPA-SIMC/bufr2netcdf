@@ -36,6 +36,15 @@ struct SingleValArray : public ValArray
     {
         vars.push_back(Var(var, false));
     }
+
+    virtual void dump(FILE* out)
+    {
+        for (size_t i = 0; i < vars.size(); ++i)
+        {
+            string formatted = vars[i].format();
+            fprintf(out, "%s[%zd]: %s\n", name.c_str(), i, formatted.c_str());
+        }
+    }
 };
 
 struct MultiValArray : public ValArray
@@ -49,6 +58,16 @@ struct MultiValArray : public ValArray
             arrs.push_back(SingleValArray());
 
         arrs[nesting].add(var);
+    }
+
+    virtual void dump(FILE* out)
+    {
+        for (size_t a = 0; a < arrs.size(); ++a)
+            for (size_t i = 0; i < arrs[1].vars.size(); ++i)
+            {
+                string formatted = arrs[a].vars[i].format();
+                fprintf(out, "%s[%zd,%zd]: %s\n", name.c_str(), a, i, formatted.c_str());
+            }
     }
 };
 
@@ -143,6 +162,16 @@ void Arrays::add(const Bulletin& bulletin)
 {
     ArrayBuilder ab(bulletin, *this);
     bulletin.run_dds(ab);
+}
+
+void Arrays::dump(FILE* out)
+{
+    for (std::vector<ValArray*>::const_iterator i = arrays.begin();
+            i != arrays.end(); ++i)
+    {
+        ValArray& va = **i;
+        va.dump(out);
+    }
 }
 
 }
