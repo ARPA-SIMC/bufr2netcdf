@@ -68,7 +68,7 @@ struct Arrays
     map<string, unsigned> byname;
 
     Arrays(Namer::Type type = Namer::PLAIN)
-        : namer(Namer::get(type)) {}
+        : namer(Namer::get(type).release()) {}
 
     ~Arrays()
     {

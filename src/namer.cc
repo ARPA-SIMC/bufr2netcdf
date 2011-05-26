@@ -71,11 +71,11 @@ public:
     }
 };
 
-Namer* Namer::get(Type type)
+auto_ptr<Namer> Namer::get(Type type)
 {
     switch (type)
     {
-        case PLAIN: return new PlainNamer;
+        case PLAIN: return auto_ptr<Namer>(new PlainNamer);
         case MNEMONIC: throw error_unimplemented("mnemonic namers not yet implemented");
         default:
             error_consistency::throwf("requested namer for unsupported type %d", (int)type);

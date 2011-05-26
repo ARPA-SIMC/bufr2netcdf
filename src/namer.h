@@ -24,6 +24,7 @@
 
 #include <wreport/varinfo.h>
 #include <string>
+#include <memory>
 
 namespace b2nc {
 
@@ -50,7 +51,7 @@ struct Namer
     /**
      * Get a namer by type.
      */
-    static Namer* get(Type type);
+    static std::auto_ptr<Namer> get(Type type);
 };
 
 

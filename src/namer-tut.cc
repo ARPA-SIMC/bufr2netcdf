@@ -42,6 +42,8 @@ TESTGRP(namers);
 template<> template<>
 void to::test<1>()
 {
+    auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+
     //Convtest t("cdfin_acars");
     //t.convert();
 }
