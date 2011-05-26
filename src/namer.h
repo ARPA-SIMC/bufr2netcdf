@@ -35,6 +35,11 @@ struct Namer
         MNEMONIC,
     };
 
+    static const char* DT_DATA;
+    static const char* DT_QBITS;
+    static const char* DT_CHAR;
+    static const char* DT_QAINFO;
+
     virtual ~Namer() {}
 
     /**
@@ -51,7 +56,7 @@ struct Namer
      *   True if the variable is seen inside a nested loop, false if it is at
      *   the top level of the BUFR message
      */
-    virtual std::string name(wreport::Varcode code, const std::string& tag) = 0;
+    virtual std::string name(const char* type, wreport::Varcode code, const std::string& tag) = 0;
 
     /**
      * Get a namer by type.

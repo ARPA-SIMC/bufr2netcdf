@@ -166,7 +166,7 @@ public:
     virtual void encode_var(Varinfo info, unsigned var_pos)
     {
         const Var& var = get_var(var_pos);
-        ValArray& arr = arrays.get_valarray(var, tag);
+        ValArray& arr = arrays.get_valarray(Namer::DT_DATA, var, tag);
         arr.add(var, rep_nesting);
 
         // TODO: encode attributes
@@ -194,9 +194,9 @@ void Arrays::start(const std::string& tag)
     namer->start(tag);
 }
 
-ValArray& Arrays::get_valarray(const Var& var, const std::string& tag)
+ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::string& tag)
 {
-    string name = namer->name(var.code(), tag);
+    string name = namer->name(type, var.code(), tag);
 
     map<string, unsigned>::const_iterator i = byname.find(name);
     if (i != byname.end())

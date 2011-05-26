@@ -71,11 +71,11 @@ void to::test<1>()
     read_bufr(arrays, "cdfin_acars");
 
     ensure_equals(arrays.arrays.size(), 39u);
-    ensure_equals(arrays.arrays[0]->name, "TODO_B01033_000");
+    ensure_equals(arrays.arrays[0]->name, "Data_B01033_000");
     ensure_equals(arrays.arrays[0]->get_size(0), 133);
-    ensure_equals(arrays.arrays[4]->name, "TODO_B05001_000");
+    ensure_equals(arrays.arrays[4]->name, "Data_B05001_000");
     ensure_equals(arrays.arrays[4]->get_size(0), 133);
-    ensure_equals(arrays.arrays[38]->name, "TODO_B33026_000");
+    ensure_equals(arrays.arrays[38]->name, "Data_B33026_000");
     ensure_equals(arrays.arrays[38]->get_size(0), 133);
 
     var = arrays.arrays[4]->get_var(0, 0);

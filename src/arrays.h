@@ -58,7 +58,7 @@ struct Arrays
     ~Arrays();
 
     void start(const std::string& tag);
-    ValArray& get_valarray(const wreport::Var& var, const std::string& tag);
+    ValArray& get_valarray(const char* type, const wreport::Var& var, const std::string& tag);
 
     void add(const wreport::Bulletin& bulletin);
 

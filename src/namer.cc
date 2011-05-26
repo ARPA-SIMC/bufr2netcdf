@@ -30,6 +30,11 @@ using namespace std;
 
 namespace b2nc {
 
+const char* Namer::DT_DATA = "Data";
+const char* Namer::DT_QBITS = "QBits";
+const char* Namer::DT_CHAR = "Char";
+const char* Namer::DT_QAINFO = "QAInfo";
+
 namespace {
 
 struct SeenCounter
@@ -105,9 +110,8 @@ public:
         get_counter(tag).reset();
     }
 
-    virtual std::string name(Varcode code, const std::string& tag)
+    virtual std::string name(const char* type, Varcode code, const std::string& tag)
     {
-        const char* type = "TODO";
         string fcode = varcode_format(code);
 
         // Get/create counter for this tag
