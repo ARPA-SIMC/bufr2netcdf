@@ -40,6 +40,9 @@ struct Namer
     static const char* DT_CHAR;
     static const char* DT_QAINFO;
 
+    static const char* ENV_TABLE_DIR;
+    static const char* DEFAULT_TABLE_DIR;
+
     virtual ~Namer() {}
 
     /**

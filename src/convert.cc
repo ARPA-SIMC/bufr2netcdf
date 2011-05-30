@@ -37,7 +37,7 @@ void Converter::convert(FILE* in, int outncid)
     string rawmsg;
     BufrBulletin bulletin;
 
-    Arrays arrays;
+    Arrays arrays(Namer::MNEMONIC);
     Sections sec1(1);
     Sections sec2(2);
     while (BufrBulletin::read(in, rawmsg /* , fname = 0 */))
