@@ -98,7 +98,7 @@ struct Convtest
         const char* nccmp = getenv("B2NC_NCCMP");
         ensure(nccmp);
         ensure(sys::fs::access(nccmp, X_OK));
-        string cmd = str::fmtf("%s -d -m -g %s %s 2>&1", nccmp, resfile.c_str(), tmpfile.c_str());
+        string cmd = str::fmtf("%s -d -m -g -f %s %s 2>&1", nccmp, resfile.c_str(), tmpfile.c_str());
         char line[1024];
         FILE* cmpres = popen(cmd.c_str(), "r");
         if (cmpres == NULL)

@@ -77,8 +77,27 @@ struct SingleValArray : public ValArray
             type = NC_INT;
         else
             type = NC_FLOAT; // TODO: why not double?
+
         int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
         error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+
+        if (info->is_string())
+        {
+            char missing = NC_FILL_CHAR;
+            res = nc_put_att_text(ncid, nc_varid, "_FillValue", 1, &missing);
+        }
+        else if (info->scale == 0)
+        {
+            int missing = NC_FILL_INT;
+            res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
+        }
+        else
+        {
+            float missing = NC_FILL_FLOAT;
+            res = nc_put_att_float(ncid, nc_varid, "_FillValue", NC_FLOAT, 1, &missing);
+        }
+        error_netcdf::throwf_iferror(res, "setting _FillValue for %s", name.c_str());
+
         return nc_varid;
     }
 
