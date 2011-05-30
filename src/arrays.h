@@ -31,6 +31,7 @@
 namespace wreport {
 struct Var;
 struct Bulletin;
+struct BufrBulletin;
 }
 
 namespace b2nc {
@@ -67,6 +68,22 @@ struct Arrays
     void add(const wreport::Bulletin& bulletin);
 
     void dump(FILE* out);
+};
+
+struct Sections
+{
+    std::vector<std::string> values;
+    unsigned max_length;
+    unsigned idx;
+    int nc_dimid;
+    int nc_varid;
+
+    Sections(unsigned idx);
+
+    void add(const wreport::BufrBulletin& bulletin);
+
+    bool define(int ncid, int bufrdim);
+    void putvar(int ncid) const;
 };
 
 }

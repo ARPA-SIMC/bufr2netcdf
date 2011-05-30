@@ -175,7 +175,7 @@ struct MultiValArray : public ValArray
     bool define(int ncid, int bufrdim)
     {
         // TODO
-        return -1;
+        return false;
     }
     void putvar(int ncid) const
     {
@@ -326,5 +326,78 @@ void Arrays::dump(FILE* out)
         va.dump(out);
     }
 }
+
+Sections::Sections(unsigned idx)
+    : max_length(0), idx(idx), nc_dimid(-1), nc_varid(-1)
+{
+}
+
+void Sections::add(const wreport::BufrBulletin& bulletin)
+{
+    if (!bulletin.raw_details)
+    {
+        values.push_back(string());
+        return;
+    }
+
+    unsigned len = bulletin.raw_details->sec[idx+1] - bulletin.raw_details->sec[idx];
+    if (len == 0)
+    {
+        values.push_back(string());
+        return;
+    }
+
+    if (len > max_length)
+        max_length = len;
+    values.push_back(string((const char*)bulletin.raw_details->sec[idx], len));
+}
+
+bool Sections::define(int ncid, int bufrdim)
+{
+    if (max_length == 0)
+        return false;
+
+    char name[20];
+    snprintf(name, 20, "section%d_length", idx);
+
+    int res = nc_def_dim(ncid, name, max_length, &nc_dimid);
+    error_netcdf::throwf_iferror(res, "creating %s dimension", name);
+
+    snprintf(name, 20, "section%d", idx);
+
+    int dims[] = { bufrdim, nc_dimid };
+    res = nc_def_var(ncid, name, NC_BYTE, 2, dims, &nc_varid);
+    error_netcdf::throwf_iferror(res, "creating variable %s", name);
+
+    return true;
+}
+
+void Sections::putvar(int ncid) const
+{
+    if (max_length == 0)
+        return;
+
+    size_t start[] = {0, 0};
+    size_t count[] = {1, 0};
+    unsigned char missing[max_length]; // Missing value
+    memset(missing, NC_FILL_BYTE, max_length);
+    for (size_t i = 0; i < values.size(); ++i)
+    {
+        int res;
+        start[0] = i;
+        if (!values[i].empty())
+        {
+            count[1] = values[i].size();
+            res = nc_put_vara_uchar(ncid, nc_varid, start, count, (const unsigned char*)values[i].data());
+        }
+        else
+        {
+            count[1] = max_length;
+            res = nc_put_vara_uchar(ncid, nc_varid, start, count, missing);
+        }
+        error_netcdf::throwf_iferror(res, "storing %zd string values", count[1]);
+    }
+}
+
 
 }
