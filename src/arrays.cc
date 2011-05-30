@@ -104,9 +104,23 @@ struct SingleValArray : public ValArray
         res = nc_put_att_text(ncid, nc_varid, "units", strlen(info->unit), info->unit);
         error_netcdf::throwf_iferror(res, "setting unit attribute for %s", name.c_str());
 
-        int ifxy = WR_VAR_F(info->var) * 100000 + WR_VAR_X(info->var) * 1000 + WR_VAR_Y(info->var);
-        res = nc_put_att_int(ncid, nc_varid, "ifxy", NC_INT, 1, &ifxy);
-        error_netcdf::throwf_iferror(res, "setting ifxy attribute for %s", name.c_str());
+        res = nc_put_att_text(ncid, nc_varid, "type", strlen("Data"), "Data"); // TODO
+        error_netcdf::throwf_iferror(res, "setting type attribute for %s", name.c_str());
+
+        {
+            int ifxy = WR_VAR_F(info->var) * 100000 + WR_VAR_X(info->var) * 1000 + WR_VAR_Y(info->var);
+            res = nc_put_att_int(ncid, nc_varid, "ifxy", NC_INT, 1, &ifxy);
+            error_netcdf::throwf_iferror(res, "setting ifxy attribute for %s", name.c_str());
+        }
+
+        {
+            int rcnt = 0; // TODO
+            res = nc_put_att_int(ncid, nc_varid, "rcnt", NC_INT, 1, &rcnt);
+            error_netcdf::throwf_iferror(res, "setting rcnt attribute for %s", name.c_str());
+        }
+
+        res = nc_put_att_text(ncid, nc_varid, "dim0_length", strlen("_constant"), "_constant"); // TODO
+        error_netcdf::throwf_iferror(res, "setting dim0_length attribute for %s", name.c_str());
 
         return nc_varid;
     }
