@@ -96,7 +96,13 @@ struct SingleValArray : public ValArray
             float missing = NC_FILL_FLOAT;
             res = nc_put_att_float(ncid, nc_varid, "_FillValue", NC_FLOAT, 1, &missing);
         }
-        error_netcdf::throwf_iferror(res, "setting _FillValue for %s", name.c_str());
+        error_netcdf::throwf_iferror(res, "setting _FillValue attribute for %s", name.c_str());
+
+        res = nc_put_att_text(ncid, nc_varid, "long_name", strlen(info->desc), info->desc);
+        error_netcdf::throwf_iferror(res, "setting long_name attribute for %s", name.c_str());
+
+        res = nc_put_att_text(ncid, nc_varid, "units", strlen(info->unit), info->unit);
+        error_netcdf::throwf_iferror(res, "setting unit attribute for %s", name.c_str());
 
         return nc_varid;
     }
