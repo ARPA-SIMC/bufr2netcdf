@@ -50,6 +50,8 @@ void Converter::convert(FILE* in, int outncid)
     IntArray s1localsubcat("section1_local_data_sub_category");
     IntArray s1mtv("section1_master_tables_version");
     IntArray s1ltv("section1_local_tables_version");
+    IntArray s1date("section1_date");
+    IntArray s1time("section1_time");
     while (BufrBulletin::read(in, rawmsg /* , fname = 0 */))
     {
         // Decode the BUFR message
@@ -66,6 +68,8 @@ void Converter::convert(FILE* in, int outncid)
         s1localsubcat.add(bulletin.localsubtype);
         s1mtv.add(bulletin.master_table);
         s1ltv.add(bulletin.local_table);
+        s1date.add(bulletin.rep_year * 10000 + bulletin.rep_month * 100 + bulletin.rep_day);
+        s1time.add(bulletin.rep_hour * 10000 + bulletin.rep_minute * 100 + bulletin.rep_second);
         arrays.add(bulletin);
         sec1.add(bulletin);
         sec2.add(bulletin);
@@ -92,6 +96,8 @@ void Converter::convert(FILE* in, int outncid)
     s1localsubcat.define(outncid, dim_bufr_records);
     s1mtv.define(outncid, dim_bufr_records);
     s1ltv.define(outncid, dim_bufr_records);
+    s1date.define(outncid, dim_bufr_records);
+    s1time.define(outncid, dim_bufr_records);
     sec1.define(outncid, dim_bufr_records);
     sec2.define(outncid, dim_bufr_records);
 
@@ -117,6 +123,8 @@ void Converter::convert(FILE* in, int outncid)
     s1localsubcat.putvar(outncid);
     s1mtv.putvar(outncid);
     s1ltv.putvar(outncid);
+    s1date.putvar(outncid);
+    s1time.putvar(outncid);
     sec1.putvar(outncid);
     sec2.putvar(outncid);
 
