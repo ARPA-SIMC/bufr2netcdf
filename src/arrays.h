@@ -86,6 +86,21 @@ struct Sections
     void putvar(int ncid) const;
 };
 
+struct IntArray
+{
+    std::string name;
+    std::vector<int> values;
+    int nc_varid;
+
+    IntArray(const std::string& name);
+
+    void add(int val);
+    void add_missing();
+
+    bool define(int ncid, int bufrdim);
+    void putvar(int ncid) const;
+};
+
 }
 
 #endif

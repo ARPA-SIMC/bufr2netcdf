@@ -442,5 +442,40 @@ void Sections::putvar(int ncid) const
     }
 }
 
+IntArray::IntArray(const std::string& name)
+    : name(name), nc_varid(-1)
+{
+}
+
+void IntArray::add(int val)
+{
+    values.push_back(val);
+}
+void IntArray::add_missing()
+{
+    values.push_back(NC_FILL_INT);
+}
+
+bool IntArray::define(int ncid, int bufrdim)
+{
+    if (values.empty()) return false;
+    int res = nc_def_var(ncid, name.c_str(), NC_INT, 1, &bufrdim, &nc_varid);
+    error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+
+    int missing = NC_FILL_INT;
+    res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
+
+    return true;
+}
+
+void IntArray::putvar(int ncid) const
+{
+    if (values.empty()) return;
+    size_t start[] = {0};
+    size_t count[] = {values.size()};
+    int res = nc_put_vara_int(ncid, nc_varid, start, count, values.data());
+    error_netcdf::throwf_iferror(res, "storing %zd integer values", values.size());
+}
+
 
 }

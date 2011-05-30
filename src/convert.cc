@@ -40,12 +40,32 @@ void Converter::convert(FILE* in, int outncid)
     Arrays arrays(Namer::MNEMONIC);
     Sections sec1(1);
     Sections sec2(2);
+    IntArray edition("edition_number");
+    IntArray s1mtn("section1_master_table_nr");
+    IntArray s1ce("section1_centre");
+    IntArray s1sc("section1_subcentre");
+    IntArray s1usn("section1_update_sequence_nr");
+    IntArray s1cat("section1_data_category");
+    IntArray s1subcat("section1_int_data_sub_category");
+    IntArray s1localsubcat("section1_local_data_sub_category");
+    IntArray s1mtv("section1_master_tables_version");
+    IntArray s1ltv("section1_local_tables_version");
     while (BufrBulletin::read(in, rawmsg /* , fname = 0 */))
     {
         // Decode the BUFR message
         bulletin.decode(rawmsg);
         // TODO: if first, build metadata
         // Add contents to the various data arrays
+        edition.add(bulletin.edition);
+        s1mtn.add(bulletin.master_table_number);
+        s1ce.add(bulletin.centre);
+        s1sc.add(bulletin.subcentre);
+        s1usn.add(bulletin.update_sequence_number);
+        s1cat.add(bulletin.type);
+        s1subcat.add(bulletin.subtype);
+        s1localsubcat.add(bulletin.localsubtype);
+        s1mtv.add(bulletin.master_table);
+        s1ltv.add(bulletin.local_table);
         arrays.add(bulletin);
         sec1.add(bulletin);
         sec2.add(bulletin);
@@ -62,6 +82,16 @@ void Converter::convert(FILE* in, int outncid)
 
     // Define variables
 
+    edition.define(outncid, dim_bufr_records);
+    s1mtn.define(outncid, dim_bufr_records);
+    s1ce.define(outncid, dim_bufr_records);
+    s1sc.define(outncid, dim_bufr_records);
+    s1usn.define(outncid, dim_bufr_records);
+    s1cat.define(outncid, dim_bufr_records);
+    s1subcat.define(outncid, dim_bufr_records);
+    s1localsubcat.define(outncid, dim_bufr_records);
+    s1mtv.define(outncid, dim_bufr_records);
+    s1ltv.define(outncid, dim_bufr_records);
     sec1.define(outncid, dim_bufr_records);
     sec2.define(outncid, dim_bufr_records);
 
@@ -77,6 +107,16 @@ void Converter::convert(FILE* in, int outncid)
     res = nc_enddef(outncid);
     error_netcdf::throwf_iferror(res, "leaving define mode for file %s", "##TODO##");
 
+    edition.putvar(outncid);
+    s1mtn.putvar(outncid);
+    s1ce.putvar(outncid);
+    s1sc.putvar(outncid);
+    s1usn.putvar(outncid);
+    s1cat.putvar(outncid);
+    s1subcat.putvar(outncid);
+    s1localsubcat.putvar(outncid);
+    s1mtv.putvar(outncid);
+    s1ltv.putvar(outncid);
     sec1.putvar(outncid);
     sec2.putvar(outncid);
 
