@@ -21,6 +21,7 @@
 #include "utils.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
+#include <wibble/regexp.h>
 #include <wibble/string.h>
 #include <wibble/sys/fs.h>
 #include <netcdf.h>
@@ -46,6 +47,30 @@ struct convert_shar
 TESTGRP(convert);
 
 namespace {
+
+struct MultiRegexp
+{
+    vector<ERegexp*> exps;
+
+    ~MultiRegexp()
+    {
+        for (vector<ERegexp*>::iterator i = exps.begin(); i != exps.end(); ++i)
+            delete *i;
+    }
+
+    void add(const std::string& expr)
+    {
+        exps.push_back(new ERegexp(expr));
+    }
+
+    bool match(const std::string& s)
+    {
+        for (vector<ERegexp*>::const_iterator i = exps.begin(); i != exps.end(); ++i)
+            if ((*i)->match(s))
+                return true;
+        return false;
+    }
+};
 
 struct Convtest
 {
@@ -103,16 +128,28 @@ struct Convtest
         FILE* cmpres = popen(cmd.c_str(), "r");
         if (cmpres == NULL)
             error_system::throwf("opening pipe from \"%s\"", cmd.c_str());
-        bool has_errors = false;
+
+        MultiRegexp ignore_list;
+        ignore_list.add("^DIFFER : NAME : VARIABLE : section2_[a-z_]+ : VARIABLE DOESN'T EXIST IN ");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z]+ : ATTRIBUTE : units : VALUES : CODE_TABLE <> CODE TABLE [0-9]+");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z]+ : ATTRIBUTE : units : VALUES : CCITT_IA5 <> CCITTIA5");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z]+ : ATTRIBUTE : units : VALUES : DEGREE_TRUE <> DEGREE TRUE");
+        ignore_list.add("^DIFFER : VARIABLE \"edition_number\" IS MISSING ATTRIBUTE WITH NAME \"reference");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z]+ : ATTRIBUTE : long_name : VALUES : ");
+        ignore_list.add("^DIFFER : NUMBER OF ATTRIBUTES : VARIABLE : edition_number : [0-9]+ <> 1");
+
+        vector<string> problems;
         while (fgets(line, 1024, cmpres) != NULL)
         {
+            if (ignore_list.match(line))
+                continue;
+            problems.push_back(line);
             fprintf(stderr, "%s", line);
-            has_errors = true;
         }
         if (!feof(cmpres))
             error_system::throwf("reading from \"%s\"", cmd.c_str());
+        ensure_equals(problems.size(), 0u);
         ensure_equals(pclose(cmpres), 0);
-        ensure(!has_errors);
     }
 };
 

@@ -52,27 +52,35 @@ void Converter::convert(FILE* in, int outncid)
     IntArray s1ltv("section1_local_tables_version");
     IntArray s1date("section1_date");
     IntArray s1time("section1_time");
+
     while (BufrBulletin::read(in, rawmsg /* , fname = 0 */))
     {
         // Decode the BUFR message
         bulletin.decode(rawmsg);
+
         // TODO: if first, build metadata
-        // Add contents to the various data arrays
-        edition.add(bulletin.edition);
-        s1mtn.add(bulletin.master_table_number);
-        s1ce.add(bulletin.centre);
-        s1sc.add(bulletin.subcentre);
-        s1usn.add(bulletin.update_sequence_number);
-        s1cat.add(bulletin.type);
-        s1subcat.add(bulletin.subtype);
-        s1localsubcat.add(bulletin.localsubtype);
-        s1mtv.add(bulletin.master_table);
-        s1ltv.add(bulletin.local_table);
-        s1date.add(bulletin.rep_year * 10000 + bulletin.rep_month * 100 + bulletin.rep_day);
-        s1time.add(bulletin.rep_hour * 10000 + bulletin.rep_minute * 100 + bulletin.rep_second);
+
         arrays.add(bulletin);
-        sec1.add(bulletin);
-        sec2.add(bulletin);
+
+        for (vector<Subset>::const_iterator si = bulletin.subsets.begin();
+                si != bulletin.subsets.end(); ++si)
+        {
+            // Add contents to the various data arrays
+            edition.add(bulletin.edition);
+            s1mtn.add(bulletin.master_table_number);
+            s1ce.add(bulletin.centre);
+            s1sc.add(bulletin.subcentre);
+            s1usn.add(bulletin.update_sequence_number);
+            s1cat.add(bulletin.type);
+            s1subcat.add(bulletin.subtype);
+            s1localsubcat.add(bulletin.localsubtype);
+            s1mtv.add(bulletin.master_table);
+            s1ltv.add(bulletin.local_table);
+            s1date.add(bulletin.rep_year * 10000 + bulletin.rep_month * 100 + bulletin.rep_day);
+            s1time.add(bulletin.rep_hour * 10000 + bulletin.rep_minute * 100 + bulletin.rep_second);
+            sec1.add(bulletin);
+            sec2.add(bulletin);
+        }
     }
 
     // TODO: add arrays to NetCDF
@@ -100,12 +108,7 @@ void Converter::convert(FILE* in, int outncid)
     s1time.define(outncid, dim_bufr_records);
     sec1.define(outncid, dim_bufr_records);
     sec2.define(outncid, dim_bufr_records);
-
-    for (std::vector<ValArray*>::const_iterator i = arrays.arrays.begin();
-            i != arrays.arrays.end(); ++i)
-    {
-        /* int id = */ (*i)->define(outncid, dim_bufr_records);
-    }
+    arrays.define(outncid, dim_bufr_records);
 
     // TODO nc_put_att       /* put attribute: assign attribute values */
 
@@ -127,12 +130,7 @@ void Converter::convert(FILE* in, int outncid)
     s1time.putvar(outncid);
     sec1.putvar(outncid);
     sec2.putvar(outncid);
-
-    for (std::vector<ValArray*>::const_iterator i = arrays.arrays.begin();
-            i != arrays.arrays.end(); ++i)
-    {
-        (*i)->putvar(outncid);
-    }
+    arrays.putvar(outncid);
 }
 
 }

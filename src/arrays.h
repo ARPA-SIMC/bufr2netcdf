@@ -32,6 +32,7 @@ namespace wreport {
 struct Var;
 struct Bulletin;
 struct BufrBulletin;
+struct Subset;
 }
 
 namespace b2nc {
@@ -60,6 +61,17 @@ struct Arrays
     std::vector<ValArray*> arrays;
     std::map<std::string, unsigned> byname;
 
+    // Pointers used for date/time aggregations (NULL if not found)
+    ValArray* date_year;
+    ValArray* date_month;
+    ValArray* date_day;
+    ValArray* time_hour;
+    ValArray* time_minute;
+    ValArray* time_second;
+
+    int date_varid;
+    int time_varid;
+
     Arrays(Namer::Type type = Namer::PLAIN);
     ~Arrays();
 
@@ -67,6 +79,9 @@ struct Arrays
     ValArray& get_valarray(const char* type, const wreport::Var& var, const std::string& tag);
 
     void add(const wreport::Bulletin& bulletin);
+
+    bool define(int ncid, int bufrdim);
+    void putvar(int ncid) const;
 
     void dump(FILE* out);
 };
