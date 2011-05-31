@@ -72,7 +72,10 @@ void Converter::convert(FILE* in, int outncid)
             s1sc.add(bulletin.subcentre);
             s1usn.add(bulletin.update_sequence_number);
             s1cat.add(bulletin.type);
-            s1subcat.add(bulletin.subtype);
+            if (bulletin.subtype == 255)
+                s1subcat.add_missing();
+            else
+                s1subcat.add(bulletin.subtype);
             s1localsubcat.add(bulletin.localsubtype);
             s1mtv.add(bulletin.master_table);
             s1ltv.add(bulletin.local_table);
