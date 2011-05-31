@@ -156,8 +156,8 @@ void to::test<5>()
 template<> template<>
 void to::test<6>()
 {
-    //Convtest t("cdfin_gps_zenith");
-    //t.convert();
+    Convtest t("cdfin_gps_zenith");
+    t.convert();
 }
 
 template<> template<>
