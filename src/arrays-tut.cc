@@ -50,6 +50,7 @@ static void read_bufr(Arrays& a, const std::string& testname)
     if (infd == NULL)
         error_system::throwf("cannot open %s", srcfile.c_str());
 
+    int bufr_idx = -1;
     string rawmsg;
     BufrBulletin bulletin;
     while (BufrBulletin::read(infd, rawmsg, srcfile.c_str()))
@@ -57,7 +58,7 @@ static void read_bufr(Arrays& a, const std::string& testname)
         // Decode the BUFR message
         bulletin.decode(rawmsg);
         // Add contents to the various data arrays
-        a.add(bulletin);
+        a.add(bulletin, bufr_idx);
     }
 
     fclose(infd);
@@ -70,19 +71,22 @@ void to::test<1>()
     Arrays arrays;
     read_bufr(arrays, "cdfin_acars");
 
-    ensure_equals(arrays.arrays.size(), 39u);
+    ensure_equals(arrays.arrays.size(), 40u);
     ensure_equals(arrays.arrays[0]->name, "Data_B01033_000");
-    ensure_equals(arrays.arrays[0]->get_size(0), 133);
+    ensure_equals(arrays.arrays[0]->get_size(), 133);
+    ensure_equals(arrays.arrays[0]->get_max_rep(), 1);
     ensure_equals(arrays.arrays[4]->name, "Data_B05001_000");
-    ensure_equals(arrays.arrays[4]->get_size(0), 133);
-    ensure_equals(arrays.arrays[38]->name, "Data_B33026_000");
-    ensure_equals(arrays.arrays[38]->get_size(0), 133);
+    ensure_equals(arrays.arrays[4]->get_size(), 133);
+    ensure_equals(arrays.arrays[4]->get_max_rep(), 1);
+    ensure_equals(arrays.arrays[39]->name, "Data_B33026_000");
+    ensure_equals(arrays.arrays[39]->get_size(), 133);
+    ensure_equals(arrays.arrays[39]->get_max_rep(), 1);
 
     var = arrays.arrays[4]->get_var(0, 0);
     ensure(var != NULL);
     ensure_equals(var->enqd(), 48.45500);
 
-    var = arrays.arrays[4]->get_var(0, 132);
+    var = arrays.arrays[4]->get_var(132, 0);
     ensure(var != NULL);
     ensure_equals(var->enqd(), 46.16833);
 

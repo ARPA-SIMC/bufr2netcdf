@@ -44,10 +44,16 @@ struct ValArray
     std::vector< std::pair<wreport::Varcode, std::string> > references;
 
     virtual ~ValArray() {}
-    virtual void add(const wreport::Var& var, unsigned nesting=0) = 0;
+    virtual void add(const wreport::Var& var, unsigned bufr_idx) = 0;
 
-    virtual const wreport::Var* get_var(unsigned nesting, unsigned pos) const = 0;
-    virtual size_t get_size(unsigned nesting) const = 0;
+    /// Returns the variable for the given BUFR and repetition instance
+    virtual const wreport::Var* get_var(unsigned bufr_idx, unsigned rep=0) const = 0;
+
+    /// Returns the array size (number of BUFR messages seen)
+    virtual size_t get_size() const = 0;
+
+    /// Returns the maximum number of repetition instances found
+    virtual size_t get_max_rep() const = 0;
 
     virtual bool define(int ncid, int bufrdim) = 0;
     virtual void putvar(int ncid) const = 0;
@@ -78,7 +84,14 @@ struct Arrays
     void start(const std::string& tag);
     ValArray& get_valarray(const char* type, const wreport::Var& var, const std::string& tag);
 
-    void add(const wreport::Bulletin& bulletin);
+    /**
+     * Adds all the subsets for a bulletin.
+     *
+     * @param bufr_idx
+     *   The index of the last subset seen, or -1 if no subsets have been seen
+     *   yet. It is incremented by 1 for each subset seen.
+     */
+    void add(const wreport::Bulletin& bulletin, int& bufr_idx);
 
     bool define(int ncid, int bufrdim);
     void putvar(int ncid) const;

@@ -53,6 +53,7 @@ void Converter::convert(FILE* in, int outncid)
     IntArray s1date("section1_date");
     IntArray s1time("section1_time");
 
+    int bufr_idx = -1;
     while (BufrBulletin::read(in, rawmsg /* , fname = 0 */))
     {
         // Decode the BUFR message
@@ -60,7 +61,7 @@ void Converter::convert(FILE* in, int outncid)
 
         // TODO: if first, build metadata
 
-        arrays.add(bulletin);
+        arrays.add(bulletin, bufr_idx);
 
         for (vector<Subset>::const_iterator si = bulletin.subsets.begin();
                 si != bulletin.subsets.end(); ++si)

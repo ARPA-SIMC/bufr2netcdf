@@ -32,56 +32,11 @@ using namespace std;
 
 namespace b2nc {
 
-struct SingleValArray : public ValArray
+struct BaseValArray : public ValArray
 {
-    std::vector<Var> vars;
-
-    void add(const Var& var, unsigned nesting=0)
+    void add_common_attributes(int ncid, Varinfo info)
     {
-        vars.push_back(Var(var, false));
-    }
-
-    const Var* get_var(unsigned nesting, unsigned pos) const
-    {
-        if (nesting > 0) return NULL;
-        if (pos >= vars.size()) return NULL;
-        return &vars[pos];
-    }
-    size_t get_size(unsigned nesting) const
-    {
-        if (nesting > 0) return 0;
-        return vars.size();
-    }
-
-    bool define(int ncid, int bufrdim)
-    {
-        // Skip variable if it's never been found
-        if (vars.empty())
-        {
-            nc_varid = -1;
-            return false;
-        }
-
-        int dims[2] = { bufrdim, 0 };
-        int ndims = 1;
-        nc_type type;
-        Varinfo info = vars[0].info();
-        if (info->is_string())
-        {
-            string dimname = name + "_strlen";
-            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
-            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
-            ++ndims;
-            type = NC_CHAR;
-        }
-        else if (info->scale == 0)
-            type = NC_INT;
-        else
-            type = NC_FLOAT; // TODO: why not double?
-
-        int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
-        error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
-
+        int res;
         if (info->is_string())
         {
             char missing = NC_FILL_CHAR;
@@ -157,6 +112,69 @@ struct SingleValArray : public ValArray
             error_netcdf::throwf_iferror(res, "setting references attribute for %s", name.c_str());
         }
 
+    }
+};
+
+struct SingleValArray : public BaseValArray
+{
+    std::vector<Var> vars;
+
+    void add(const Var& var, unsigned bufr_idx=0)
+    {
+        while (vars.size() < bufr_idx)
+            vars.push_back(Var(var.info()));
+        if (vars.size() == bufr_idx)
+            vars.push_back(Var(var, false));
+    }
+
+    const Var* get_var(unsigned bufr_idx, unsigned rep) const
+    {
+        if (rep > 0) return NULL;
+        if (bufr_idx >= vars.size()) return NULL;
+        return &vars[bufr_idx];
+    }
+
+    size_t get_size() const
+    {
+        return vars.size();
+    }
+
+    size_t get_max_rep() const
+    {
+        return 1;
+    }
+
+    bool define(int ncid, int bufrdim)
+    {
+        // Skip variable if it's never been found
+        if (vars.empty())
+        {
+            nc_varid = -1;
+            return false;
+        }
+
+        int dims[2] = { bufrdim, 0 };
+        int ndims = 1;
+        nc_type type;
+        Varinfo info = vars[0].info();
+        if (info->is_string())
+        {
+            string dimname = name + "_strlen";
+            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
+            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
+            ++ndims;
+            type = NC_CHAR;
+        }
+        else if (info->scale == 0)
+            type = NC_INT;
+        else
+            type = NC_FLOAT; // TODO: why not double?
+
+        int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
+        error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+
+        add_common_attributes(ncid, info);
+
         return nc_varid;
     }
 
@@ -230,39 +248,144 @@ struct SingleValArray : public ValArray
     }
 };
 
-struct MultiValArray : public ValArray
+struct MultiValArray : public BaseValArray
 {
     std::vector<SingleValArray> arrs;
 
-    void add(const Var& var, unsigned nesting=0)
+    void add(const wreport::Var& var, unsigned bufr_idx)
     {
         // Ensure we have the right number of dimensions
-        while (nesting >= arrs.size())
+        while (bufr_idx >= arrs.size())
             arrs.push_back(SingleValArray());
 
-        arrs[nesting].add(var);
+        arrs[bufr_idx].add(var, arrs[bufr_idx].get_size());
     }
 
-    const Var* get_var(unsigned nesting, unsigned pos) const
+    const Var* get_var(unsigned bufr_idx, unsigned rep=0) const
     {
-        if (nesting >= arrs.size()) return NULL;
-        if (pos >= arrs[nesting].vars.size()) return NULL;
-        return &arrs[nesting].vars[pos];
+        if (bufr_idx >= arrs.size()) return NULL;
+        if (rep >= arrs[bufr_idx].vars.size()) return NULL;
+        return &arrs[bufr_idx].vars[rep];
     }
 
-    size_t get_size(unsigned nesting) const
+    size_t get_size() const
     {
-        if (nesting >= arrs.size()) return 0;
-        return arrs[nesting].vars.size();
+        return arrs.size();
+    }
+
+    size_t get_max_rep() const
+    {
+        size_t res = 0;
+        for (std::vector<SingleValArray>::const_iterator i = arrs.begin();
+                i != arrs.end(); ++i)
+        {
+            size_t s = i->get_size();
+            if (s > res) res = s;
+        }
+        return res;
     }
 
     bool define(int ncid, int bufrdim)
     {
-        // TODO
-        return false;
+        // Skip variable if it's never been found
+        if (arrs.empty())
+        {
+            nc_varid = -1;
+            return false;
+        }
+
+        int dims[3] = { bufrdim, 0, 0 };
+
+        // Define the array size dimension
+        {
+            string dimname = "TODO";
+            int res = nc_def_dim(ncid, dimname.c_str(), get_max_rep(), &dims[1]);
+            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
+        }
+
+        int ndims = 2;
+        nc_type type;
+        Varinfo info = get_var(0, 0)->info();
+        if (info->is_string())
+        {
+            string dimname = name + "_strlen";
+            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[2]);
+            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
+            ++ndims;
+            type = NC_CHAR;
+        }
+        else if (info->scale == 0)
+            type = NC_INT;
+        else
+            type = NC_FLOAT; // TODO: why not double?
+
+        int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
+        error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+
+        add_common_attributes(ncid, info);
+
+        return true;
     }
     void putvar(int ncid) const
     {
+#if 0
+        if (arrs.empty()) return;
+
+        Varinfo info = vars[0].info();
+        if (info->is_string())
+        {
+            size_t start[] = {0, 0};
+            size_t count[] = {1, info->len};
+            char missing[info->len]; // Missing value
+            memset(missing, NC_FILL_CHAR, info->len);
+            char value[info->len]; // Space-padded value
+            for (size_t i = 0; i < vars.size(); ++i)
+            {
+                int res;
+                start[0] = i;
+                if (vars[i].isset())
+                {
+                    size_t len = strlen(vars[i].value());
+                    memcpy(value, vars[i].value(), len);
+                    for (size_t i = len; i < info->len; ++i)
+                        value[i] = ' ';
+                    res = nc_put_vara_text(ncid, nc_varid, start, count, value);
+                } else
+                    res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
+                error_netcdf::throwf_iferror(res, "storing %zd string values", vars.size());
+            }
+        }
+        else if (info->scale == 0)
+        {
+            size_t start[] = {0};
+            size_t count[] = {vars.size()};
+            int vals[vars.size()];
+            for (size_t i = 0; i < vars.size(); ++i)
+            {
+                if (vars[i].isset())
+                    vals[i] = vars[i].enqi();
+                else
+                    vals[i] = NC_FILL_INT;
+            }
+            int res = nc_put_vara_int(ncid, nc_varid, start, count, vals);
+            error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
+        }
+        else
+        {
+            size_t start[] = {0};
+            size_t count[] = {vars.size()};
+            float vals[vars.size()];
+            for (size_t i = 0; i < vars.size(); ++i)
+            {
+                if (vars[i].isset())
+                    vals[i] = vars[i].enqd();
+                else
+                    vals[i] = NC_FILL_FLOAT;
+            }
+            int res = nc_put_vara_float(ncid, nc_varid, start, count, vals);
+            error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
+        }
+#endif
     }
 
     void dump(FILE* out)
@@ -297,6 +420,7 @@ protected:
     std::vector<unsigned> rep_stack;
     map<Varcode, string> context;
     string tag;
+    int& bufr_idx;
 
     void update_tag()
     {
@@ -311,8 +435,8 @@ protected:
     }
 
 public:
-    ArrayBuilder(const Bulletin& bulletin, Arrays& arrays)
-        : bulletin::ConstBaseDDSExecutor(bulletin), arrays(arrays), rep_nesting(0) {}
+    ArrayBuilder(const Bulletin& bulletin, Arrays& arrays, int& bufr_idx)
+        : bulletin::ConstBaseDDSExecutor(bulletin), arrays(arrays), rep_nesting(0), bufr_idx(bufr_idx) {}
 
     virtual void start_subset(unsigned subset_no)
     {
@@ -322,6 +446,7 @@ public:
         rep_stack.clear();
         update_tag();
         arrays.start(tag);
+        ++bufr_idx;
     }
 
     virtual void push_repetition(unsigned length, unsigned count)
@@ -348,7 +473,7 @@ public:
     {
         const Var& var = get_var(var_pos);
         ValArray& arr = arrays.get_valarray(Namer::DT_DATA, var, tag);
-        arr.add(var, rep_nesting);
+        arr.add(var, bufr_idx);
 
         // Add references information to arr
         if (arr.references.empty())
@@ -432,9 +557,9 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
     return *arrays.back();
 }
 
-void Arrays::add(const Bulletin& bulletin)
+void Arrays::add(const Bulletin& bulletin, int& bufr_idx)
 {
-    ArrayBuilder ab(bulletin, *this);
+    ArrayBuilder ab(bulletin, *this, bufr_idx);
     bulletin.run_dds(ab);
 }
 
@@ -516,13 +641,13 @@ void Arrays::putvar(int ncid) const
 
     if (date_year && date_month && date_day)
     {
-        size_t size = date_year->get_size(0);
+        size_t size = date_year->get_size();
         int values[size];
         for (size_t i = 0; i < size; ++i)
         {
-            const Var* vy = date_year->get_var(0, i);
-            const Var* vm = date_month->get_var(0, i);
-            const Var* vd = date_day->get_var(0, i);
+            const Var* vy = date_year->get_var(i, 0);
+            const Var* vm = date_month->get_var(i, 0);
+            const Var* vd = date_day->get_var(i, 0);
             if (vy->isset() && vm->isset() && vd->isset())
                 values[i] = vy->enqi() * 10000 + vm->enqi() * 100 + vd->enqi();
             else
@@ -537,13 +662,13 @@ void Arrays::putvar(int ncid) const
 
     if (time_hour)
     {
-        size_t size = time_hour->get_size(0);
+        size_t size = time_hour->get_size();
         int values[size];
         for (size_t i = 0; i < size; ++i)
         {
-            const Var* th = time_hour->get_var(0, i);
-            const Var* tm = time_minute ? time_minute->get_var(0, i) : 0;
-            const Var* ts = time_second ? time_second->get_var(0, i) : 0;
+            const Var* th = time_hour->get_var(i, 0);
+            const Var* tm = time_minute ? time_minute->get_var(i, 0) : 0;
+            const Var* ts = time_second ? time_second->get_var(i, 0) : 0;
             if (th->isset())
             {
                 values[i] = th->enqi() * 10000;
