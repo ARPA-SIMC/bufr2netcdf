@@ -63,9 +63,20 @@ struct ValArray
 
 struct Arrays
 {
+    struct LoopInfo
+    {
+        std::string dimname;
+        size_t firstarr;
+        int nc_dimid;
+        LoopInfo(const std::string& dimname, size_t firstarr)
+            : dimname(dimname), firstarr(firstarr), nc_dimid(-1) {}
+    };
+
     Namer* namer;
     std::vector<ValArray*> arrays;
     std::map<std::string, unsigned> byname;
+    // Map loop tags to dimension information
+    std::map<std::string, LoopInfo> dimnames;
 
     // Pointers used for date/time aggregations (NULL if not found)
     ValArray* date_year;
@@ -78,6 +89,9 @@ struct Arrays
     int date_varid;
     int time_varid;
 
+    unsigned loop_idx;
+    int bufr_idx;
+
     Arrays(Namer::Type type = Namer::PLAIN);
     ~Arrays();
 
@@ -86,12 +100,8 @@ struct Arrays
 
     /**
      * Adds all the subsets for a bulletin.
-     *
-     * @param bufr_idx
-     *   The index of the last subset seen, or -1 if no subsets have been seen
-     *   yet. It is incremented by 1 for each subset seen.
      */
-    void add(const wreport::Bulletin& bulletin, int& bufr_idx);
+    void add(const wreport::Bulletin& bulletin);
 
     bool define(int ncid, int bufrdim);
     void putvar(int ncid) const;

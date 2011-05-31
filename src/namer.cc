@@ -166,7 +166,7 @@ public:
             else
             {
                 char buf[20];
-                snprintf(buf, 20, "%s_%s%d", type, name, index-1);
+                snprintf(buf, 20, "%s%d", name, index-1);
                 return buf;
             }
         } else {

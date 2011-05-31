@@ -251,6 +251,9 @@ struct SingleValArray : public BaseValArray
 struct MultiValArray : public BaseValArray
 {
     std::vector<SingleValArray> arrs;
+    const Arrays::LoopInfo& loopinfo;
+
+    MultiValArray(const Arrays::LoopInfo& loopinfo) : loopinfo(loopinfo) {}
 
     void add(const wreport::Var& var, unsigned bufr_idx)
     {
@@ -294,15 +297,7 @@ struct MultiValArray : public BaseValArray
             return false;
         }
 
-        int dims[3] = { bufrdim, 0, 0 };
-
-        // Define the array size dimension
-        {
-            string dimname = "TODO";
-            int res = nc_def_dim(ncid, dimname.c_str(), get_max_rep(), &dims[1]);
-            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
-        }
-
+        int dims[3] = { bufrdim, loopinfo.nc_dimid, 0 };
         int ndims = 2;
         nc_type type;
         Varinfo info = get_var(0, 0)->info();
@@ -510,7 +505,8 @@ Arrays::Arrays(Namer::Type type)
     : namer(Namer::get(type).release()),
       date_year(0), date_month(0), date_day(0),
       time_hour(0), time_minute(0), time_second(0),
-      date_varid(-1), time_varid(-1)
+      date_varid(-1), time_varid(-1),
+      loop_idx(0), bufr_idx(-1)
 {
 }
 
@@ -538,7 +534,20 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
     if (tag.empty())
         arr.reset(new SingleValArray);
     else
-        arr.reset(new MultiValArray);
+    {
+        map<string, LoopInfo>::const_iterator i = dimnames.find(tag);
+        if (i != dimnames.end())
+            arr.reset(new MultiValArray(i->second));
+        else
+        {
+            char buf[20];
+            snprintf(buf, 20, "Loop_%03d_maxlen", loop_idx);
+            ++loop_idx;
+            pair<std::map<std::string, LoopInfo>::iterator, bool> res =
+                dimnames.insert(make_pair(tag, LoopInfo(buf, arrays.size())));
+            arr.reset(new MultiValArray(res.first->second));
+        }
+    }
     arr->name = name;
     arrays.push_back(arr.release());
     byname[name] = arrays.size() - 1;
@@ -557,7 +566,7 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
     return *arrays.back();
 }
 
-void Arrays::add(const Bulletin& bulletin, int& bufr_idx)
+void Arrays::add(const Bulletin& bulletin)
 {
     ArrayBuilder ab(bulletin, *this, bufr_idx);
     bulletin.run_dds(ab);
@@ -575,6 +584,15 @@ void Arrays::dump(FILE* out)
 
 bool Arrays::define(int ncid, int bufrdim)
 {
+    // Define the array size dimensions
+    for (std::map<std::string, LoopInfo>::iterator i = dimnames.begin();
+            i != dimnames.end(); ++i)
+    {
+        ValArray* va = arrays[i->second.firstarr];
+        int res = nc_def_dim(ncid, i->second.dimname.c_str(), va->get_max_rep(), &i->second.nc_dimid);
+        error_netcdf::throwf_iferror(res, "creating %s dimension", i->second.dimname.c_str());
+    }
+
     for (vector<ValArray*>::const_iterator i = arrays.begin();
             i != arrays.end(); ++i)
         (*i)->define(ncid, bufrdim);
