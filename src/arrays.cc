@@ -282,9 +282,9 @@ protected:
     virtual void encode_attr(Varinfo info, unsigned var_pos, Varcode attr_code) {}
     virtual unsigned encode_repetition_count(Varinfo info, unsigned var_pos)
     {
+        encode_var(info, var_pos);
         const Var& var = get_var(var_pos);
         return var.enqi();
-
     }
     virtual unsigned encode_bitmap_repetition_count(Varinfo info, const Var& bitmap)
     {
