@@ -122,6 +122,33 @@ struct SingleValArray : public ValArray
         res = nc_put_att_text(ncid, nc_varid, "dim0_length", strlen("_constant"), "_constant"); // TODO
         error_netcdf::throwf_iferror(res, "setting dim0_length attribute for %s", name.c_str());
 
+        // Refrences attributes
+        if (!references.empty())
+        {
+            int ref_codes[references.size()];
+            for (size_t i = 0; i < references.size(); ++i)
+            {
+                Varcode code = references[i].first;
+                const std::string& name = references[i].second;
+
+                ref_codes[i] = WR_VAR_F(code) * 100000
+                             + WR_VAR_X(code) * 1000
+                             + WR_VAR_Y(code);
+
+                char att_name[20];
+                snprintf(att_name, 20, "reference_%01d%02d%03d",
+                        WR_VAR_F(code),
+                        WR_VAR_X(code),
+                        WR_VAR_Y(code));
+
+                res = nc_put_att_text(ncid, nc_varid, att_name, name.size(), name.data());
+                error_netcdf::throwf_iferror(res, "setting %s attribute for %s", att_name, this->name.c_str());
+            }
+
+            res = nc_put_att_int(ncid, nc_varid, "references", NC_INT, references.size(), ref_codes);
+            error_netcdf::throwf_iferror(res, "setting references attribute for %s", name.c_str());
+        }
+
         return nc_varid;
     }
 
@@ -254,6 +281,7 @@ protected:
     Arrays& arrays;
     unsigned rep_nesting;
     std::vector<unsigned> rep_stack;
+    map<Varcode, string> context;
     string tag;
 
     void update_tag()
@@ -307,6 +335,16 @@ public:
         const Var& var = get_var(var_pos);
         ValArray& arr = arrays.get_valarray(Namer::DT_DATA, var, tag);
         arr.add(var, rep_nesting);
+
+        // Add references information to arr
+        if (arr.references.empty())
+            for (map<Varcode, string>::const_iterator i = context.begin();
+                    i != context.end(); ++i)
+                arr.references.push_back(*i);
+
+        // Update current context information
+        if (WR_VAR_X(var.code()) < 10)
+            context[var.code()] = arr.name;
 
         // TODO: encode attributes
     }

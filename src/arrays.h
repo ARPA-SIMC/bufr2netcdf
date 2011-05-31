@@ -40,6 +40,7 @@ struct ValArray
 {
     std::string name;
     int nc_varid;
+    std::vector< std::pair<wreport::Varcode, std::string> > references;
 
     virtual ~ValArray() {}
     virtual void add(const wreport::Var& var, unsigned nesting=0) = 0;
