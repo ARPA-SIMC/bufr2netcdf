@@ -93,6 +93,38 @@ void to::test<1>()
     //arrays.dump(stderr);
 }
 
+template<> template<>
+void to::test<2>()
+{
+    const Var* var;
+    Arrays arrays;
+    read_bufr(arrays, "cdfin_gps_zenith");
+
+    ensure_equals(arrays.arrays.size(), 31u);
+    ensure_equals(arrays.arrays[0]->name, "Data_B01015_000");
+    ensure_equals(arrays.arrays[0]->get_size(), 94u);
+    ensure_equals(arrays.arrays[0]->get_max_rep(), 1);
+    ensure_equals(arrays.arrays[16]->name, "Data_B02020_000");
+    ensure_equals(arrays.arrays[16]->get_size(), 94u);
+    ensure_equals(arrays.arrays[16]->get_max_rep(), 25u);
+    ensure_equals(arrays.arrays[30]->name, "Data_B15011_000");
+    ensure_equals(arrays.arrays[30]->get_size(), 94u);
+    ensure_equals(arrays.arrays[30]->get_max_rep(), 1);
+
+    var = arrays.arrays[16]->get_var(0, 0);
+    ensure(var != NULL);
+    ensure(!var->isset());
+
+    var = arrays.arrays[16]->get_var(93, 24);
+    ensure(var != NULL);
+    ensure(!var->isset());
+
+    var = arrays.arrays[16]->get_var(94, 25);
+    ensure(var == NULL);
+
+    //arrays.dump(stderr);
+}
+
 }
 
 // vim:set ts=4 sw=4:
