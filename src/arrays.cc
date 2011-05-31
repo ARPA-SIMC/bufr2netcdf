@@ -21,6 +21,7 @@
 
 #include "arrays.h"
 #include "utils.h"
+#include "mnemo.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
 #include <netcdf.h>
@@ -121,6 +122,13 @@ struct SingleValArray : public ValArray
 
         res = nc_put_att_text(ncid, nc_varid, "dim0_length", strlen("_constant"), "_constant"); // TODO
         error_netcdf::throwf_iferror(res, "setting dim0_length attribute for %s", name.c_str());
+
+        const mnemo::Table* table = mnemo::Table::get(14);
+        if (const char* mnemo = table->find(info->var))
+        {
+            res = nc_put_att_text(ncid, nc_varid, "mnemonic", strlen(mnemo), mnemo);
+            error_netcdf::throwf_iferror(res, "setting mnemonic attribute for %s", name.c_str());
+        }
 
         // Refrences attributes
         if (!references.empty())
@@ -345,8 +353,6 @@ public:
         // Update current context information
         if (WR_VAR_X(var.code()) < 10)
             context[var.code()] = arr.name;
-
-        // TODO: encode attributes
     }
 
     virtual void encode_char_data(Varcode code, unsigned var_pos)
