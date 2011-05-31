@@ -171,13 +171,19 @@ struct SingleValArray : public ValArray
             size_t count[] = {1, info->len};
             char missing[info->len]; // Missing value
             memset(missing, NC_FILL_CHAR, info->len);
+            char value[info->len]; // Space-padded value
             for (size_t i = 0; i < vars.size(); ++i)
             {
                 int res;
                 start[0] = i;
                 if (vars[i].isset())
-                    res = nc_put_vara_text(ncid, nc_varid, start, count, vars[i].value());
-                else
+                {
+                    size_t len = strlen(vars[i].value());
+                    memcpy(value, vars[i].value(), len);
+                    for (size_t i = len; i < info->len; ++i)
+                        value[i] = ' ';
+                    res = nc_put_vara_text(ncid, nc_varid, start, count, value);
+                } else
                     res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
                 error_netcdf::throwf_iferror(res, "storing %zd string values", vars.size());
             }
