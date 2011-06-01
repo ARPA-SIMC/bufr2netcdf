@@ -45,19 +45,25 @@ template<> template<>
 void to::test<1>()
 {
     auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
-
-    string tag = "";
+    string name, mnemo;
 
     for (int i = 0; i < 3; ++i)
     {
         try {
+            string tag = "";
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_000");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_000");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_001");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 3), tag), "Data_B01003_000");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_001");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_002");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_000");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_000");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_001");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 3), tag, name, mnemo);
+            ensure_equals(name, "Data_B01003_000");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_001");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_002");
         } catch (tut::failure& e) {
             throw tut::failure(str::fmtf("%s (iteration %i)", e.what(), i));
         }
@@ -69,6 +75,7 @@ template<> template<>
 void to::test<2>()
 {
     auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+    string name, mnemo;
 
     for (int i = 0; i < 3; ++i)
     {
@@ -76,19 +83,26 @@ void to::test<2>()
             string tag = "";
 
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_000");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_001");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_000");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_001");
 
             tag = "1";
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_002");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_003");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_002");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_003");
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_002");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_003");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_002");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_003");
 
             tag = "";
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_004");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_004");
         } catch (tut::failure& e) {
             throw tut::failure(str::fmtf("%s (iteration %i)", e.what(), i));
         }
@@ -100,6 +114,7 @@ template<> template<>
 void to::test<3>()
 {
     auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+    string name, mnemo;
 
     for (int i = 0; i < 3; ++i)
     {
@@ -107,40 +122,58 @@ void to::test<3>()
             string tag = "";
 
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_000");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_000");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_000");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_000");
 
             tag = "1";
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_001");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_001");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_001");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_001");
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_001");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_001");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_001");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_001");
 
             tag = "";
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_002");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_002");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_002");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_002");
 
             tag = "2";
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_003");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_003");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_003");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_003");
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_003");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_003");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_003");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_003");
 
             tag = "2_1";
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_004");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_004");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_004");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_004");
             n->start(tag);
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_004");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_004");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_004");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_004");
 
             tag = "";
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag), "Data_B01001_005");
-            ensure_equals(n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag), "Data_B01002_005");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 1), tag, name, mnemo);
+            ensure_equals(name, "Data_B01001_005");
+            n->name(Namer::DT_DATA, WR_VAR(0, 1, 2), tag, name, mnemo);
+            ensure_equals(name, "Data_B01002_005");
         } catch (tut::failure& e) {
             throw tut::failure(str::fmtf("%s (iteration %i)", e.what(), i));
         }

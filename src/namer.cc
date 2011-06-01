@@ -92,10 +92,22 @@ struct Counter
     }
 };
 
-struct BaseNamer : public Namer
+/**
+ * Type_FXXYYY_RRR style namer
+ */
+class PlainNamer : public Namer
 {
+protected:
+    const mnemo::Table* table;
     SeenCounter seen_counter;
     std::map<string, Counter> counters;
+
+public:
+    PlainNamer()
+    {
+        // TODO: choose after first BUFR in the bunch?
+        table = mnemo::Table::get(14);
+    }
 
     Counter& get_counter(const std::string& tag)
     {
@@ -111,65 +123,15 @@ struct BaseNamer : public Namer
     {
         get_counter(tag).reset();
     }
-};
 
-/**
- * Type_FXXYYY_RRR style namer
- */
-class PlainNamer : public BaseNamer
-{
-public:
-    virtual std::string name(const char* type, Varcode code, const std::string& tag)
+    virtual void name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
     {
-        string fcode = varcode_format(code);
-
         // Get/create counter for this tag
         Counter& counter = get_counter(tag);
         unsigned index = counter.get_index(code);
 
-        char buf[20];
-        snprintf(buf, 20, "%s_%c%02d%03d_%03d",
-                type,
-                "BRCD"[WR_VAR_F(code)],
-                WR_VAR_X(code),
-                WR_VAR_Y(code),
-                index);
-        return buf;
-    }
-};
-
-class MnemoNamer : public BaseNamer
-{
-protected:
-    const mnemo::Table* table;
-
-public:
-    MnemoNamer()
-    {
-        // TODO: choose after first BUFR in the bunch?
-        table = mnemo::Table::get(14);
-    }
-
-    virtual std::string name(const char* type, Varcode code, const std::string& tag)
-    {
-        string fcode = varcode_format(code);
-
-        // Get/create counter for this tag
-        Counter& counter = get_counter(tag);
-        unsigned index = counter.get_index(code);
-        const char* name = table->find(code);
-
-        if (name)
+        // Plain name
         {
-            if (index == 0)
-                return name;
-            else
-            {
-                char buf[20];
-                snprintf(buf, 20, "%s%d", name, index-1);
-                return buf;
-            }
-        } else {
             char buf[20];
             snprintf(buf, 20, "%s_%c%02d%03d_%03d",
                     type,
@@ -177,8 +139,33 @@ public:
                     WR_VAR_X(code),
                     WR_VAR_Y(code),
                     index);
-            return buf;
+            name = buf;
         }
+
+        // Mnemonic name
+        const char* mname = table->find(code);
+        if (mname)
+        {
+            if (index == 0)
+                mnemo = mname;
+            else
+            {
+                char buf[20];
+                snprintf(buf, 20, "%s%d", mname, index-1);
+                mnemo = buf;
+            }
+        } else
+            mnemo.clear();
+    }
+};
+
+struct MnemoNamer : public PlainNamer
+{
+    virtual void name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
+    {
+        PlainNamer::name(type, code, tag, name, mnemo);
+        if (!mnemo.empty())
+            name = mnemo;
     }
 };
 

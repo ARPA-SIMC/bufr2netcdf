@@ -40,6 +40,7 @@ namespace b2nc {
 struct ValArray
 {
     std::string name;
+    std::string mnemo;
     int nc_varid;
     std::vector< std::pair<wreport::Varcode, std::string> > references;
 

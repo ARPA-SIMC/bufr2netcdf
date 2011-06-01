@@ -55,11 +55,11 @@ struct Namer
      *
      * @params code
      *   The variable code
-     * @params nested
-     *   True if the variable is seen inside a nested loop, false if it is at
-     *   the top level of the BUFR message
+     * @params tag
+     *   A string tag identifying the portion of the input data where the code
+     *   is found
      */
-    virtual std::string name(const char* type, wreport::Varcode code, const std::string& tag) = 0;
+    virtual void name(const char* type, wreport::Varcode code, const std::string& tag, std::string& name, std::string& mnemo) = 0;
 
     /**
      * Get a namer by type.

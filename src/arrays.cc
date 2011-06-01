@@ -78,12 +78,8 @@ struct BaseValArray : public ValArray
         res = nc_put_att_text(ncid, nc_varid, "dim0_length", strlen("_constant"), "_constant"); // TODO
         error_netcdf::throwf_iferror(res, "setting dim0_length attribute for %s", name.c_str());
 
-        const mnemo::Table* table = mnemo::Table::get(14);
-        if (const char* mnemo = table->find(info->var))
-        {
-            res = nc_put_att_text(ncid, nc_varid, "mnemonic", strlen(mnemo), mnemo);
-            error_netcdf::throwf_iferror(res, "setting mnemonic attribute for %s", name.c_str());
-        }
+        res = nc_put_att_text(ncid, nc_varid, "mnemonic", mnemo.size(), mnemo.data());
+        error_netcdf::throwf_iferror(res, "setting mnemonic attribute for %s", name.c_str());
 
         // Refrences attributes
         if (!references.empty())
@@ -522,7 +518,8 @@ void Arrays::start(const std::string& tag)
 
 ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::string& tag)
 {
-    string name = namer->name(type, var.code(), tag);
+    string name, mnemo;
+    namer->name(type, var.code(), tag, name, mnemo);
 
     map<string, unsigned>::const_iterator i = byname.find(name);
     if (i != byname.end())
@@ -549,6 +546,7 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
         }
     }
     arr->name = name;
+    arr->mnemo = mnemo;
     arrays.push_back(arr.release());
     byname[name] = arrays.size() - 1;
 
