@@ -58,8 +58,10 @@ struct Namer
      * @params tag
      *   A string tag identifying the portion of the input data where the code
      *   is found
+     * @returns the number of time the given code has been seen in the message,
+     *   excluding repetitions
      */
-    virtual void name(const char* type, wreport::Varcode code, const std::string& tag, std::string& name, std::string& mnemo) = 0;
+    virtual unsigned name(const char* type, wreport::Varcode code, const std::string& tag, std::string& name, std::string& mnemo) = 0;
 
     /**
      * Get a namer by type.

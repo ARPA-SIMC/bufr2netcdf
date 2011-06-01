@@ -124,7 +124,7 @@ public:
         get_counter(tag).reset();
     }
 
-    virtual void name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
+    virtual unsigned name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
     {
         // Get/create counter for this tag
         Counter& counter = get_counter(tag);
@@ -156,16 +156,19 @@ public:
             }
         } else
             mnemo.clear();
+
+        return index;
     }
 };
 
 struct MnemoNamer : public PlainNamer
 {
-    virtual void name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
+    virtual unsigned name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
     {
-        PlainNamer::name(type, code, tag, name, mnemo);
+        unsigned index = PlainNamer::name(type, code, tag, name, mnemo);
         if (!mnemo.empty())
             name = mnemo;
+        return index;
     }
 };
 

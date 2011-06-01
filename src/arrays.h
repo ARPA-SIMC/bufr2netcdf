@@ -41,6 +41,7 @@ struct ValArray
 {
     std::string name;
     std::string mnemo;
+    unsigned rcnt;
     int nc_varid;
     std::vector< std::pair<wreport::Varcode, std::string> > references;
 

@@ -106,6 +106,9 @@ void to::test<2>()
     ensure_equals(arrays.arrays[16]->name, "Data_B02020_000");
     ensure_equals(arrays.arrays[16]->get_size(), 94u);
     ensure_equals(arrays.arrays[16]->get_max_rep(), 25u);
+    ensure_equals(arrays.arrays[18]->name, "Data_B05021_000");
+    ensure_equals(arrays.arrays[18]->get_size(), 94u);
+    ensure_equals(arrays.arrays[18]->get_max_rep(), 25u);
     ensure_equals(arrays.arrays[30]->name, "Data_B15011_000");
     ensure_equals(arrays.arrays[30]->get_size(), 94u);
     ensure_equals(arrays.arrays[30]->get_max_rep(), 1);
@@ -120,6 +123,11 @@ void to::test<2>()
 
     var = arrays.arrays[16]->get_var(94, 25);
     ensure(var == NULL);
+
+    var = arrays.arrays[18]->get_var(0, 0);
+    ensure(var != NULL);
+    ensure(var->isset());
+    ensure_equals(var->enqi(), 0);
 
     //arrays.dump(stderr);
 }

@@ -70,7 +70,7 @@ struct BaseValArray : public ValArray
         }
 
         {
-            int rcnt = 0; // TODO
+            int rcnt = this->rcnt;
             res = nc_put_att_int(ncid, nc_varid, "rcnt", NC_INT, 1, &rcnt);
             error_netcdf::throwf_iferror(res, "setting rcnt attribute for %s", name.c_str());
         }
@@ -242,6 +242,28 @@ struct SingleValArray : public BaseValArray
             fprintf(out, "%s[%zd]: %s\n", name.c_str(), i, formatted.c_str());
         }
     }
+
+    void fill_int(int* vec, size_t size) const
+    {
+        for (unsigned i = 0; i < size; ++i)
+        {
+            if (i >= vars.size() || !vars[i].isset())
+                vec[i] = NC_FILL_INT;
+            else
+                vec[i] = vars[i].enqi();
+        }
+    }
+
+    void fill_float(float* vec, size_t size) const
+    {
+        for (unsigned i = 0; i < size; ++i)
+        {
+            if (i >= vars.size() || !vars[i].isset())
+                vec[i] = NC_FILL_FLOAT;
+            else
+                vec[i] = vars[i].enqd();
+        }
+    }
 };
 
 struct MultiValArray : public BaseValArray
@@ -315,68 +337,71 @@ struct MultiValArray : public BaseValArray
 
         add_common_attributes(ncid, info);
 
+        res = nc_put_att_text(ncid, nc_varid, "dim1_length", strlen("_constant"), "_constant"); // TODO
+        error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", name.c_str());
+
         return true;
     }
+
     void putvar(int ncid) const
     {
-#if 0
         if (arrs.empty()) return;
 
-        Varinfo info = vars[0].info();
+        size_t arrsize = get_max_rep();
+        size_t start[] = {0, 0, 0};
+        size_t count[] = {1, arrsize, 0};
+
+        Varinfo info = get_var(0, 0)->info();
         if (info->is_string())
         {
-            size_t start[] = {0, 0};
-            size_t count[] = {1, info->len};
+            count[2] = info->len;
             char missing[info->len]; // Missing value
             memset(missing, NC_FILL_CHAR, info->len);
             char value[info->len]; // Space-padded value
-            for (size_t i = 0; i < vars.size(); ++i)
+            for (size_t i = 0; i < arrs.size(); ++i)
             {
-                int res;
+                const SingleValArray& va = arrs[i];
                 start[0] = i;
-                if (vars[i].isset())
+                for (size_t j = 0; j < arrsize; ++j)
                 {
-                    size_t len = strlen(vars[i].value());
-                    memcpy(value, vars[i].value(), len);
-                    for (size_t i = len; i < info->len; ++i)
-                        value[i] = ' ';
-                    res = nc_put_vara_text(ncid, nc_varid, start, count, value);
-                } else
-                    res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
-                error_netcdf::throwf_iferror(res, "storing %zd string values", vars.size());
+                    int res;
+                    if (va.vars.size() > j && va.vars[j].isset())
+                    {
+                        size_t len = strlen(va.vars[j].value());
+                        memcpy(value, va.vars[j].value(), len);
+                        for (size_t i = len; i < info->len; ++i)
+                            value[i] = ' ';
+                        res = nc_put_vara_text(ncid, nc_varid, start, count, value);
+                    } else
+                        res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
+                    error_netcdf::throwf_iferror(res, "storing %zd string values", arrsize);
+                }
             }
         }
         else if (info->scale == 0)
         {
-            size_t start[] = {0};
-            size_t count[] = {vars.size()};
-            int vals[vars.size()];
-            for (size_t i = 0; i < vars.size(); ++i)
+            int vals[arrsize];
+            for (unsigned i = 0; i < arrs.size(); ++i)
             {
-                if (vars[i].isset())
-                    vals[i] = vars[i].enqi();
-                else
-                    vals[i] = NC_FILL_INT;
+                const SingleValArray& va = arrs[i];
+                va.fill_int(vals, arrsize);
+                start[0] = i;
+                int res = nc_put_vara_int(ncid, nc_varid, start, count, vals);
+                error_netcdf::throwf_iferror(res, "storing %zd integer values", arrsize);
             }
-            int res = nc_put_vara_int(ncid, nc_varid, start, count, vals);
-            error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
         }
         else
         {
-            size_t start[] = {0};
-            size_t count[] = {vars.size()};
-            float vals[vars.size()];
-            for (size_t i = 0; i < vars.size(); ++i)
+            float vals[arrsize];
+            for (unsigned i = 0; i < arrs.size(); ++i)
             {
-                if (vars[i].isset())
-                    vals[i] = vars[i].enqd();
-                else
-                    vals[i] = NC_FILL_FLOAT;
+                const SingleValArray& va = arrs[i];
+                va.fill_float(vals, arrsize);
+                start[0] = i;
+                int res = nc_put_vara_float(ncid, nc_varid, start, count, vals);
+                error_netcdf::throwf_iferror(res, "storing %zd float values", arrsize);
             }
-            int res = nc_put_vara_float(ncid, nc_varid, start, count, vals);
-            error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
         }
-#endif
     }
 
     void dump(FILE* out)
@@ -519,7 +544,7 @@ void Arrays::start(const std::string& tag)
 ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::string& tag)
 {
     string name, mnemo;
-    namer->name(type, var.code(), tag, name, mnemo);
+    unsigned rcnt = namer->name(type, var.code(), tag, name, mnemo);
 
     map<string, unsigned>::const_iterator i = byname.find(name);
     if (i != byname.end())
@@ -547,6 +572,7 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
     }
     arr->name = name;
     arr->mnemo = mnemo;
+    arr->rcnt = rcnt;
     arrays.push_back(arr.release());
     byname[name] = arrays.size() - 1;
 
