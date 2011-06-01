@@ -74,50 +74,26 @@ struct MultiRegexp
 
 struct Convtest
 {
+    Outfile outfile;
     string srcfile;
     string resfile;
     string tmpfile;
-    FILE* infd;
-    int outncid;
 
     Convtest(const std::string& testname)
         : srcfile(b2nc::tests::datafile("bufr/" + testname)),
           resfile(b2nc::tests::datafile("netcdf/" + testname)),
           // We are run in a known temp dir, so we can hardcode the temporary
           // file name
-          tmpfile("tmpfile.nc"),
-          infd(NULL), outncid(-1)
+          tmpfile("tmpfile.nc")
     {
-        // Open input file
-        infd = fopen(srcfile.c_str(), "rb");
-        if (infd == NULL)
-            error_system::throwf("cannot open %s", srcfile.c_str());
-
         // Create output file
-        int res = nc_create(tmpfile.c_str(), NC_CLOBBER, &outncid);
-        error_netcdf::throwf_iferror(res, "Creating file %s", tmpfile.c_str());
-    }
-
-    ~Convtest()
-    {
-        if (infd != NULL)
-            fclose(infd);
-        if (outncid != -1)
-            nc_close(outncid);
+        outfile.open(tmpfile);
     }
 
     void convert()
     {
-        // Perform the conversion
-        Converter conv;
-        conv.convert(infd, outncid);
-
-        // Close files
-        fclose(infd);
-        infd = NULL;
-        int res = nc_close(outncid);
-        error_netcdf::throwf_iferror(res, "Closing file %s", tmpfile.c_str());
-        outncid = -1;
+        outfile.add_bufr(srcfile);
+        outfile.close();
 
         // Compare results
         const char* nccmp = getenv("B2NC_NCCMP");
