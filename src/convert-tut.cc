@@ -135,7 +135,7 @@ struct Convtest
         // TODO: find out why some reference attributes are missing
         ignore_list.add("^DIFFER : NUMBER OF ATTRIBUTES : VARIABLE : edition_number : [0-9]+ <> 1");
         ignore_list.add("^DIFFER : VARIABLE \"edition_number\" IS MISSING ATTRIBUTE WITH NAME \"reference");
-        ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"reference_[0-9]+\" IN FILE \".+/test/netcdf/cdfin_gps_zenith\"");
+        ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"reference_[0-9]+\" IN FILE \".+/test/netcdf/cdfin_");
         // TODO: see if importing WMO tables from XML brings matching long names
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : long_name : VALUES : ");
         // Uncontroversial

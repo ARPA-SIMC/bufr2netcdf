@@ -23,6 +23,7 @@
 #define B2NC_CONVERT_H
 
 #include <cstdio>
+#include <string>
 
 namespace b2nc {
 
@@ -37,6 +38,23 @@ public:
      * Convert a stream of BUFR messages to one NetCDF file
      */
     void convert(FILE* in, int outncid);
+};
+
+struct Outfile
+{
+public:
+    std::string fname;
+    int ncid;
+
+    Outfile();
+    Outfile(const std::string& fname);
+    ~Outfile();
+
+    void open(const std::string& fname);
+    void close();
+
+    void add_bufr(const std::string& fname);
+    void add_bufr(FILE* in);
 };
 
 }

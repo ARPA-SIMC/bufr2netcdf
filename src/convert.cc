@@ -136,4 +136,54 @@ void Converter::convert(FILE* in, int outncid)
     arrays.putvar(outncid);
 }
 
+Outfile::Outfile() : ncid(-1) {}
+Outfile::Outfile(const std::string& fname)
+    : ncid(-1)
+{
+    open(fname);
+}
+Outfile::~Outfile()
+{
+    close();
+}
+
+void Outfile::open(const std::string& fname)
+{
+    // Create output file
+    this->fname = fname;
+    int res = nc_create(fname.c_str(), NC_CLOBBER, &ncid);
+    error_netcdf::throwf_iferror(res, "creating file %s", fname.c_str());
+}
+
+void Outfile::close()
+{
+    if (ncid != -1)
+    {
+        nc_close(ncid);
+        ncid = -1;
+    }
+}
+
+void Outfile::add_bufr(const std::string& fname)
+{
+    // Open input file
+    FILE* in = fopen(fname.c_str(), "rb");
+    if (in == NULL)
+        error_system::throwf("cannot open %s", fname.c_str());
+
+    try {
+        add_bufr(in);
+        fclose(in);
+    } catch (...) {
+        fclose(in);
+        throw;
+    }
+}
+
+void Outfile::add_bufr(FILE* in)
+{
+    Converter conv;
+    conv.convert(in, ncid);
+}
+
 }
