@@ -22,24 +22,32 @@
 #ifndef B2NC_CONVERT_H
 #define B2NC_CONVERT_H
 
-#include <cstdio>
 #include <string>
+#include <memory>
+#include <cstdio>
+
+namespace wreport {
+struct BufrBulletin;
+}
 
 namespace b2nc {
 
 /**
- * Configurable BUFR to NetCDF converter
+ * Configuration for the conversion process
  */
-class Converter
+struct Options
 {
-public:
+    bool use_mnemonic;
 
-    /**
-     * Convert a stream of BUFR messages to one NetCDF file
-     */
-    void convert(FILE* in, int outncid);
+    Options()
+        : use_mnemonic(true)
+    {
+    }
 };
 
+/**
+ * One output NetCDF file
+ */
 struct Outfile
 {
 public:
@@ -47,14 +55,40 @@ public:
     int ncid;
 
     Outfile();
-    Outfile(const std::string& fname);
-    ~Outfile();
+    virtual ~Outfile();
 
+    /**
+     * Start writing to the given output file, overwriting it if it already exists
+     */
     void open(const std::string& fname);
-    void close();
 
+    /**
+     * Write all data to the output file and close it
+     */
+    virtual void close();
+
+    /**
+     * Add all the contents of the given BUFR file
+     */
     void add_bufr(const std::string& fname);
-    void add_bufr(FILE* in);
+
+    /**
+     * Add all the condents of the given BUFR stream
+     *
+     * @param file
+     *   if provided, it is used as the file name in error messages
+     */
+    void add_bufr(FILE* in, const char* fname = 0);
+
+    /**
+     * Add all the contents of the decoded BUFR message
+     */
+    virtual void add_bufr(const wreport::BufrBulletin& bulletin) = 0;
+
+    /**
+     * Create an Outfile
+     */
+    static std::auto_ptr<Outfile> get(const Options& opts);
 };
 
 }

@@ -74,7 +74,6 @@ struct MultiRegexp
 
 struct Convtest
 {
-    Outfile outfile;
     string srcfile;
     string resfile;
     string tmpfile;
@@ -86,14 +85,20 @@ struct Convtest
           // file name
           tmpfile("tmpfile.nc")
     {
-        // Create output file
-        outfile.open(tmpfile);
     }
 
     void convert()
     {
-        outfile.add_bufr(srcfile);
-        outfile.close();
+        // Create output file
+        Options options;
+        auto_ptr<Outfile> outfile = Outfile::get(options);
+        outfile->open(tmpfile);
+
+        // Convert source file
+        outfile->add_bufr(srcfile);
+
+        // Flush output
+        outfile->close();
 
         // Compare results
         const char* nccmp = getenv("B2NC_NCCMP");

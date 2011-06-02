@@ -20,6 +20,7 @@ int main(int argc, char* argv[])
 
     string outfilename;
     bool verbose = false;
+    Options options;
 
     while (1)
     {
@@ -60,16 +61,18 @@ int main(int argc, char* argv[])
     }
 
     try {
+        auto_ptr<Outfile> outfile = Outfile::get(options);
+
         if (verbose) fprintf(stderr, "Writing to %s\n", outfilename.c_str());
-        Outfile outfile(outfilename);
+        outfile->open(outfilename);
 
         while (optind < argc)
         {
             if (verbose) fprintf(stderr, "Reading from %s\n", argv[optind]);
-            outfile.add_bufr(argv[optind++]);
+            outfile->add_bufr(argv[optind++]);
         }
 
-        outfile.close();
+        outfile->close();
     } catch (std::exception& e) {
         fprintf(stderr, "%s\n", e.what());
         return 1;
