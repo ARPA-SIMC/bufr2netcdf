@@ -22,8 +22,12 @@
 #ifndef B2NC_CONVERT_H
 #define B2NC_CONVERT_H
 
+#include <wreport/varinfo.h>
 #include <string>
 #include <memory>
+#include <map>
+#include <set>
+#include <vector>
 #include <cstdio>
 
 namespace wreport {
@@ -38,6 +42,7 @@ namespace b2nc {
 struct Options
 {
     bool use_mnemonic;
+    std::string out_fname;
 
     Options()
         : use_mnemonic(true)
@@ -45,10 +50,31 @@ struct Options
     }
 };
 
+/// Generic interface for BUFR consumers
+struct BufrSink
+{
+    virtual ~BufrSink() {}
+    virtual void add_bufr(const wreport::BufrBulletin& bulletin) = 0;
+};
+
+/**
+ * Send all the contents of the given BUFR file to \a out
+ */
+void read_bufr(const std::string& fname, BufrSink& out);
+
+/**
+ * Send all the condents of the given BUFR stream to \a out
+ *
+ * @param file
+ *   if provided, it is used as the file name in error messages
+ */
+void read_bufr(FILE* in, BufrSink& out, const char* fname = 0);
+
+
 /**
  * One output NetCDF file
  */
-struct Outfile
+struct Outfile : public BufrSink
 {
 public:
     std::string fname;
@@ -68,19 +94,6 @@ public:
     virtual void close();
 
     /**
-     * Add all the contents of the given BUFR file
-     */
-    void add_bufr(const std::string& fname);
-
-    /**
-     * Add all the condents of the given BUFR stream
-     *
-     * @param file
-     *   if provided, it is used as the file name in error messages
-     */
-    void add_bufr(FILE* in, const char* fname = 0);
-
-    /**
      * Add all the contents of the decoded BUFR message
      */
     virtual void add_bufr(const wreport::BufrBulletin& bulletin) = 0;
@@ -89,6 +102,29 @@ public:
      * Create an Outfile
      */
     static std::auto_ptr<Outfile> get(const Options& opts);
+};
+
+/**
+ * Dispatch BUFR messages to different Outfiles based on their Data Descriptor
+ * Sections.
+ *
+ * All bufr sent to an Outfile will have exactly the same DDS.
+ */
+class Dispatcher : public BufrSink
+{
+protected:
+    const Options& opts;
+    std::map< std::vector<wreport::Varcode>, Outfile* > outfiles;
+    std::set<std::string> used_fnames;
+
+    std::string get_fname(const wreport::BufrBulletin& bulletin);
+    Outfile& get_outfile(const wreport::BufrBulletin& bulletin);
+
+public:
+    Dispatcher(const Options& opts);
+    virtual ~Dispatcher();
+
+    virtual void add_bufr(const wreport::BufrBulletin& bulletin);
 };
 
 }

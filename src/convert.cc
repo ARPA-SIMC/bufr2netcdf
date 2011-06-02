@@ -32,6 +32,37 @@ using namespace std;
 
 namespace b2nc {
 
+void read_bufr(const std::string& fname, BufrSink& out)
+{
+    // Open input file
+    FILE* in = fopen(fname.c_str(), "rb");
+    if (in == NULL)
+        error_system::throwf("cannot open %s", fname.c_str());
+
+    try {
+        read_bufr(in, out, fname.c_str());
+        fclose(in);
+    } catch (...) {
+        fclose(in);
+        throw;
+    }
+}
+
+void read_bufr(FILE* in, BufrSink& out, const char* fname)
+{
+    string rawmsg;
+    BufrBulletin bulletin;
+
+    while (BufrBulletin::read(in, rawmsg, fname))
+    {
+        // Decode the BUFR message
+        bulletin.decode(rawmsg);
+
+        out.add_bufr(bulletin);
+    }
+}
+
+
 Outfile::Outfile() : ncid(-1) {}
 Outfile::~Outfile()
 {
@@ -53,36 +84,6 @@ void Outfile::close()
     {
         nc_close(ncid);
         ncid = -1;
-    }
-}
-
-void Outfile::add_bufr(const std::string& fname)
-{
-    // Open input file
-    FILE* in = fopen(fname.c_str(), "rb");
-    if (in == NULL)
-        error_system::throwf("cannot open %s", fname.c_str());
-
-    try {
-        add_bufr(in);
-        fclose(in);
-    } catch (...) {
-        fclose(in);
-        throw;
-    }
-}
-
-void Outfile::add_bufr(FILE* in, const char* fname)
-{
-    string rawmsg;
-    BufrBulletin bulletin;
-
-    while (BufrBulletin::read(in, rawmsg, fname))
-    {
-        // Decode the BUFR message
-        bulletin.decode(rawmsg);
-
-        add_bufr(bulletin);
     }
 }
 
@@ -210,6 +211,65 @@ struct OutfileImpl : public Outfile
 std::auto_ptr<Outfile> Outfile::get(const Options& opts)
 {
     return auto_ptr<Outfile>(new OutfileImpl(opts));
+}
+
+
+Dispatcher::Dispatcher(const Options& opts)
+    : opts(opts)
+{
+}
+
+Dispatcher::~Dispatcher()
+{
+    for (std::map< std::vector<wreport::Varcode>, Outfile* >::iterator i = outfiles.begin();
+            i != outfiles.end(); ++i)
+    {
+        // Outfiles will close() on deletion if needed
+        delete i->second;
+    }
+}
+
+std::string Dispatcher::get_fname(const wreport::BufrBulletin& bulletin)
+{
+    string base = opts.out_fname;
+
+    // Drop the trailing .nc extension if it exists
+    if (base.substr(base.size() - 3) == ".nc")
+        base = base.substr(0, base.size() - 3);
+
+    char catstr[40];
+    snprintf(catstr, 40, "-%d-%d-%d", bulletin.type, bulletin.subtype, bulletin.localsubtype);
+    base += catstr;
+
+    string cand = base + ".nc";
+    for (unsigned i = 0; used_fnames.find(cand) != used_fnames.end(); ++i)
+    {
+        char ext[20];
+        snprintf(ext, 20, "-%d.nc", i);
+        cand = base + ext;
+    }
+    used_fnames.insert(cand);
+    return cand;
+}
+
+Outfile& Dispatcher::get_outfile(const wreport::BufrBulletin& bulletin)
+{
+    std::map< std::vector<wreport::Varcode>, Outfile* >::iterator i = outfiles.find(bulletin.datadesc);
+    if (i != outfiles.end())
+        return *(i->second);
+    else
+    {
+        auto_ptr<Outfile> out = Outfile::get(opts);
+        Outfile& res = *out;
+        out->open(get_fname(bulletin));
+        outfiles.insert(make_pair(bulletin.datadesc, out.release()));
+        return res;
+    }
+}
+
+void Dispatcher::add_bufr(const wreport::BufrBulletin& bulletin)
+{
+    get_outfile(bulletin).add_bufr(bulletin);
 }
 
 }

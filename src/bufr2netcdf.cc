@@ -18,7 +18,6 @@ int main(int argc, char* argv[])
         {0, 0, 0, 0}
     };
 
-    string outfilename;
     bool verbose = false;
     Options options;
 
@@ -37,7 +36,7 @@ int main(int argc, char* argv[])
         switch (c)
         {
             case 'o':
-                outfilename = optarg;
+                options.out_fname = optarg;
                 break;
             case 'v':
                 verbose = true;
@@ -54,22 +53,24 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (outfilename.empty())
+    if (options.out_fname.empty())
     {
-        outfilename = argv[optind];
-        outfilename += ".nc";
+        options.out_fname = argv[optind];
+        options.out_fname += ".nc";
     }
 
     try {
+        Dispatcher dispatcher(options);
+
         auto_ptr<Outfile> outfile = Outfile::get(options);
 
-        if (verbose) fprintf(stderr, "Writing to %s\n", outfilename.c_str());
-        outfile->open(outfilename);
+
+        outfile->open(options.out_fname);
 
         while (optind < argc)
         {
             if (verbose) fprintf(stderr, "Reading from %s\n", argv[optind]);
-            outfile->add_bufr(argv[optind++]);
+            read_bufr(argv[optind++], *outfile);
         }
 
         outfile->close();

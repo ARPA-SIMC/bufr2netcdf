@@ -95,7 +95,7 @@ struct Convtest
         outfile->open(tmpfile);
 
         // Convert source file
-        outfile->add_bufr(srcfile);
+        read_bufr(srcfile, *outfile);
 
         // Flush output
         outfile->close();
