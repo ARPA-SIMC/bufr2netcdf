@@ -124,6 +124,8 @@ public:
     Dispatcher(const Options& opts);
     virtual ~Dispatcher();
 
+    void close();
+
     virtual void add_bufr(const wreport::BufrBulletin& bulletin);
 };
 

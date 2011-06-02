@@ -62,18 +62,13 @@ int main(int argc, char* argv[])
     try {
         Dispatcher dispatcher(options);
 
-        auto_ptr<Outfile> outfile = Outfile::get(options);
-
-
-        outfile->open(options.out_fname);
-
         while (optind < argc)
         {
             if (verbose) fprintf(stderr, "Reading from %s\n", argv[optind]);
-            read_bufr(argv[optind++], *outfile);
+            read_bufr(argv[optind++], dispatcher);
         }
 
-        outfile->close();
+        dispatcher.close();
     } catch (std::exception& e) {
         fprintf(stderr, "%s\n", e.what());
         return 1;

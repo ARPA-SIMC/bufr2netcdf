@@ -221,12 +221,18 @@ Dispatcher::Dispatcher(const Options& opts)
 
 Dispatcher::~Dispatcher()
 {
+    close();
+}
+
+void Dispatcher::close()
+{
     for (std::map< std::vector<wreport::Varcode>, Outfile* >::iterator i = outfiles.begin();
             i != outfiles.end(); ++i)
     {
-        // Outfiles will close() on deletion if needed
+        i->second->close();
         delete i->second;
     }
+    outfiles.clear();
 }
 
 std::string Dispatcher::get_fname(const wreport::BufrBulletin& bulletin)
