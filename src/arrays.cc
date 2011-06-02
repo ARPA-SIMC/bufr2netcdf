@@ -32,6 +32,19 @@ using namespace std;
 
 namespace b2nc {
 
+template<typename TYPE>
+static inline TYPE nc_fill() { throw error_consistency("requested fill value for unknown type"); }
+template<> inline int nc_fill() { return NC_FILL_INT; }
+template<> inline float nc_fill() { return NC_FILL_FLOAT; }
+template<> inline std::string nc_fill() { return string(); }
+
+template<typename TYPE>
+static inline int nc_type() { throw error_consistency("requested type const value for unknown type"); }
+template<> inline int nc_type<int>() { return NC_INT; }
+template<> inline int nc_type<float>() { return NC_FLOAT; }
+template<> inline int nc_type<std::string>() { return NC_CHAR; }
+
+
 struct BaseValArray : public ValArray
 {
     BaseValArray(Varinfo info) : ValArray(info) {}
@@ -113,36 +126,97 @@ struct BaseValArray : public ValArray
     }
 };
 
+template<typename TYPE>
 struct SingleValArray : public BaseValArray
 {
-    std::vector<Var> vars;
+    std::vector<TYPE> vars;
 
     SingleValArray(Varinfo info) : BaseValArray(info) {}
 
+    size_t get_size() const { return vars.size(); }
+    size_t get_max_rep() const { return 1; }
+
     void add(const Var& var, unsigned bufr_idx=0)
     {
-        while (vars.size() < bufr_idx)
-            vars.push_back(Var(var.info()));
-        if (vars.size() == bufr_idx)
-            vars.push_back(Var(var, false));
+        while (bufr_idx >= vars.size())
+            vars.push_back(nc_fill<TYPE>());
+        if (var.isset())
+            vars[bufr_idx] = var.enq<TYPE>();
     }
 
     Var get_var(unsigned bufr_idx, unsigned rep) const
     {
-        if (rep > 0) return Var(info);
-        if (bufr_idx >= vars.size()) return Var(info);
-        return vars[bufr_idx];
+        Var res(info);
+        if (rep == 0 && bufr_idx < vars.size() && vars[bufr_idx] != nc_fill<TYPE>())
+            res.set(vars[bufr_idx]);
+        return res;
     }
 
-    size_t get_size() const
+    void dump(FILE* out)
     {
-        return vars.size();
+        for (size_t i = 0; i < vars.size(); ++i)
+        {
+            Var var = get_var(i, 0);
+            string formatted = var.format();
+            fprintf(out, "%s[%zd]: %s\n", name.c_str(), i, formatted.c_str());
+        }
     }
+};
 
-    size_t get_max_rep() const
+template<typename TYPE>
+struct SingleNumberArray : public SingleValArray<TYPE>
+{
+    SingleNumberArray(Varinfo info) : SingleValArray<TYPE>(info) {}
+
+    bool define(int ncid, int bufrdim)
     {
-        return 1;
+        // Skip variable if it's never been found
+        if (this->vars.empty())
+        {
+            this->nc_varid = -1;
+            return false;
+        }
+
+        int res = nc_def_var(ncid, this->name.c_str(), nc_type<TYPE>(), 1, &bufrdim, &this->nc_varid);
+        error_netcdf::throwf_iferror(res, "creating variable %s", this->name.c_str());
+
+        this->add_common_attributes(ncid);
+
+        return this->nc_varid;
     }
+};
+
+struct SingleIntValArray : public SingleNumberArray<int>
+{
+    SingleIntValArray(Varinfo info) : SingleNumberArray<int>(info) {}
+
+    void putvar(int ncid) const
+    {
+        if (vars.empty()) return;
+        size_t start[] = {0};
+        size_t count[] = {vars.size()};
+        int res = nc_put_vara_int(ncid, nc_varid, start, count, vars.data());
+        error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
+    }
+};
+
+struct SingleFloatValArray : public SingleNumberArray<float>
+{
+    SingleFloatValArray(Varinfo info) : SingleNumberArray<float>(info) {}
+
+    void putvar(int ncid) const
+    {
+        if (vars.empty()) return;
+        size_t start[] = {0};
+        size_t count[] = {vars.size()};
+        int res = nc_put_vara_float(ncid, nc_varid, start, count, vars.data());
+        error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
+    }
+};
+
+struct SingleStringValArray : public SingleValArray<std::string>
+{
+    SingleStringValArray(Varinfo info) : SingleValArray<std::string>(info) {}
 
     bool define(int ncid, int bufrdim)
     {
@@ -154,23 +228,11 @@ struct SingleValArray : public BaseValArray
         }
 
         int dims[2] = { bufrdim, 0 };
-        int ndims = 1;
-        nc_type type;
-        Varinfo info = vars[0].info();
-        if (info->is_string())
-        {
-            string dimname = name + "_strlen";
-            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
-            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
-            ++ndims;
-            type = NC_CHAR;
-        }
-        else if (info->scale == 0)
-            type = NC_INT;
-        else
-            type = NC_FLOAT; // TODO: why not double?
+        string dimname = name + "_strlen";
+        int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
+        error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
 
-        int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
+        res = nc_def_var(ncid, name.c_str(), NC_CHAR, 2, dims, &nc_varid);
         error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
 
         add_common_attributes(ncid);
@@ -182,115 +244,58 @@ struct SingleValArray : public BaseValArray
     {
         if (vars.empty()) return;
 
-        Varinfo info = vars[0].info();
-        if (info->is_string())
-        {
-            size_t start[] = {0, 0};
-            size_t count[] = {1, info->len};
-            char missing[info->len]; // Missing value
-            memset(missing, NC_FILL_CHAR, info->len);
-            char value[info->len]; // Space-padded value
-            for (size_t i = 0; i < vars.size(); ++i)
-            {
-                int res;
-                start[0] = i;
-                if (vars[i].isset())
-                {
-                    size_t len = strlen(vars[i].value());
-                    memcpy(value, vars[i].value(), len);
-                    for (size_t i = len; i < info->len; ++i)
-                        value[i] = ' ';
-                    res = nc_put_vara_text(ncid, nc_varid, start, count, value);
-                } else
-                    res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
-                error_netcdf::throwf_iferror(res, "storing %zd string values", vars.size());
-            }
-        }
-        else if (info->scale == 0)
-        {
-            size_t start[] = {0};
-            size_t count[] = {vars.size()};
-            int vals[vars.size()];
-            for (size_t i = 0; i < vars.size(); ++i)
-            {
-                if (vars[i].isset())
-                    vals[i] = vars[i].enqi();
-                else
-                    vals[i] = NC_FILL_INT;
-            }
-            int res = nc_put_vara_int(ncid, nc_varid, start, count, vals);
-            error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
-        }
-        else
-        {
-            size_t start[] = {0};
-            size_t count[] = {vars.size()};
-            float vals[vars.size()];
-            for (size_t i = 0; i < vars.size(); ++i)
-            {
-                if (vars[i].isset())
-                    vals[i] = vars[i].enqd();
-                else
-                    vals[i] = NC_FILL_FLOAT;
-            }
-            int res = nc_put_vara_float(ncid, nc_varid, start, count, vals);
-            error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
-        }
-    }
-
-    void dump(FILE* out)
-    {
+        size_t start[] = {0, 0};
+        size_t count[] = {1, info->len};
+        char missing[info->len]; // Missing value
+        memset(missing, NC_FILL_CHAR, info->len);
+        char value[info->len]; // Space-padded value
         for (size_t i = 0; i < vars.size(); ++i)
         {
-            string formatted = vars[i].format();
-            fprintf(out, "%s[%zd]: %s\n", name.c_str(), i, formatted.c_str());
-        }
-    }
-
-    void fill_int(int* vec, size_t size) const
-    {
-        for (unsigned i = 0; i < size; ++i)
-        {
-            if (i >= vars.size() || !vars[i].isset())
-                vec[i] = NC_FILL_INT;
-            else
-                vec[i] = vars[i].enqi();
-        }
-    }
-
-    void fill_float(float* vec, size_t size) const
-    {
-        for (unsigned i = 0; i < size; ++i)
-        {
-            if (i >= vars.size() || !vars[i].isset())
-                vec[i] = NC_FILL_FLOAT;
-            else
-                vec[i] = vars[i].enqd();
+            int res;
+            start[0] = i;
+            if (!vars[i].empty())
+            {
+                size_t len = vars[i].size();
+                memcpy(value, vars[i].data(), len);
+                for (size_t i = len; i < info->len; ++i)
+                    value[i] = ' ';
+                res = nc_put_vara_text(ncid, nc_varid, start, count, value);
+            } else
+                res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
+            error_netcdf::throwf_iferror(res, "storing %zd string values", vars.size());
         }
     }
 };
 
+
+template<typename TYPE>
 struct MultiValArray : public BaseValArray
 {
-    std::vector<SingleValArray> arrs;
+    std::vector< std::vector<TYPE> > arrs;
     const Arrays::LoopInfo& loopinfo;
 
-    MultiValArray(Varinfo info, const Arrays::LoopInfo& loopinfo) : BaseValArray(info), loopinfo(loopinfo) {}
+    MultiValArray(Varinfo info, const Arrays::LoopInfo& loopinfo)
+        : BaseValArray(info), loopinfo(loopinfo) {}
 
     void add(const wreport::Var& var, unsigned bufr_idx)
     {
         // Ensure we have the right number of dimensions
         while (bufr_idx >= arrs.size())
-            arrs.push_back(SingleValArray(info));
+            arrs.push_back(vector<TYPE>());
 
-        arrs[bufr_idx].add(var, arrs[bufr_idx].get_size());
+        // Append to the right bufr values
+        if (var.isset())
+            arrs[bufr_idx].push_back(var.enq<TYPE>());
+        else
+            arrs[bufr_idx].push_back(nc_fill<TYPE>());
     }
 
     Var get_var(unsigned bufr_idx, unsigned rep=0) const
     {
-        if (bufr_idx >= arrs.size()) return Var(info);
-        if (rep >= arrs[bufr_idx].vars.size()) return Var(info);
-        return arrs[bufr_idx].vars[rep];
+        Var res(info);
+        if (bufr_idx < arrs.size() && rep < arrs[bufr_idx].size() && arrs[bufr_idx][rep] != nc_fill<TYPE>())
+            res.set(arrs[bufr_idx][rep]);
+        return res;
     }
 
     size_t get_size() const
@@ -301,14 +306,127 @@ struct MultiValArray : public BaseValArray
     size_t get_max_rep() const
     {
         size_t res = 0;
-        for (std::vector<SingleValArray>::const_iterator i = arrs.begin();
-                i != arrs.end(); ++i)
+        for (typename std::vector< std::vector<TYPE> >::const_iterator i = this->arrs.begin();
+                i != this->arrs.end(); ++i)
         {
-            size_t s = i->get_size();
+            size_t s = i->size();
             if (s > res) res = s;
         }
         return res;
     }
+
+    void dump(FILE* out)
+    {
+        for (size_t a = 0; a < arrs.size(); ++a)
+            for (size_t i = 0; i < arrs[a].size(); ++i)
+            {
+                Var var = get_var(a, i);
+                string formatted = var.format();
+                fprintf(out, "%s[%zd,%zd]: %s\n", name.c_str(), a, i, formatted.c_str());
+            }
+    }
+};
+
+template<typename TYPE>
+struct MultiNumberValArray : public MultiValArray<TYPE>
+{
+    MultiNumberValArray(Varinfo info, const Arrays::LoopInfo& loopinfo)
+        : MultiValArray<TYPE>(info, loopinfo) {}
+
+    bool define(int ncid, int bufrdim)
+    {
+        // Skip variable if it's never been found
+        if (this->arrs.empty())
+        {
+            this->nc_varid = -1;
+            return false;
+        }
+
+        int dims[3] = { bufrdim, this->loopinfo.nc_dimid };
+        int res = nc_def_var(ncid, this->name.c_str(), nc_type<TYPE>(), 2, dims, &this->nc_varid);
+        error_netcdf::throwf_iferror(res, "creating variable %s", this->name.c_str());
+
+        this->add_common_attributes(ncid);
+
+        res = nc_put_att_text(ncid, this->nc_varid, "dim1_length", strlen("_constant"), "_constant"); // TODO
+        error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", this->name.c_str());
+
+        return true;
+    }
+
+    /**
+     * If arrs[arr_idx].size() is as long as \a storage_size, return a pointer
+     * to its data.
+     *
+     * Else, copy its values to \a storage, padding with fill values, and
+     * returns \a storage
+     */
+    const TYPE* to_fixed_array(size_t arr_idx, TYPE* storage, size_t storage_size) const
+    {
+        const vector<TYPE>& vals = this->arrs[arr_idx];
+        if (vals.size() < storage_size)
+        {
+            memcpy(storage, vals.data(), vals.size() * sizeof(TYPE));
+            for (size_t i = vals.size(); i < storage_size; ++i)
+                storage[i] = nc_fill<TYPE>();
+            return storage;
+        } else
+            return vals.data();
+    }
+};
+
+struct MultiIntValArray : public MultiNumberValArray<int>
+{
+    MultiIntValArray(Varinfo info, const Arrays::LoopInfo& loopinfo)
+        : MultiNumberValArray<int>(info, loopinfo) {}
+
+    void putvar(int ncid) const
+    {
+        if (arrs.empty()) return;
+
+        size_t arrsize = get_max_rep();
+        size_t start[] = {0, 0};
+        size_t count[] = {1, arrsize};
+        int clean_vals[arrsize];
+
+        for (unsigned i = 0; i < arrs.size(); ++i)
+        {
+            const int* to_nc = to_fixed_array(i, clean_vals, arrsize);
+            start[0] = i;
+            int res = nc_put_vara_int(ncid, nc_varid, start, count, to_nc);
+            error_netcdf::throwf_iferror(res, "storing %zd int values", arrsize);
+        }
+    }
+};
+
+struct MultiFloatValArray : public MultiNumberValArray<float>
+{
+    MultiFloatValArray(Varinfo info, const Arrays::LoopInfo& loopinfo)
+        : MultiNumberValArray<float>(info, loopinfo) {}
+
+    void putvar(int ncid) const
+    {
+        if (arrs.empty()) return;
+
+        size_t arrsize = get_max_rep();
+        size_t start[] = {0, 0};
+        size_t count[] = {1, arrsize};
+        float clean_vals[arrsize];
+
+        for (unsigned i = 0; i < arrs.size(); ++i)
+        {
+            const float* to_nc = to_fixed_array(i, clean_vals, arrsize);
+            start[0] = i;
+            int res = nc_put_vara_float(ncid, nc_varid, start, count, to_nc);
+            error_netcdf::throwf_iferror(res, "storing %zd values", arrsize);
+        }
+    }
+};
+
+struct MultiStringValArray : public MultiValArray<std::string>
+{
+    MultiStringValArray(Varinfo info, const Arrays::LoopInfo& loopinfo)
+        : MultiValArray<std::string>(info, loopinfo) {}
 
     bool define(int ncid, int bufrdim)
     {
@@ -320,22 +438,11 @@ struct MultiValArray : public BaseValArray
         }
 
         int dims[3] = { bufrdim, loopinfo.nc_dimid, 0 };
-        int ndims = 2;
-        nc_type type;
-        if (info->is_string())
-        {
-            string dimname = name + "_strlen";
-            int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[2]);
-            error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
-            ++ndims;
-            type = NC_CHAR;
-        }
-        else if (info->scale == 0)
-            type = NC_INT;
-        else
-            type = NC_FLOAT; // TODO: why not double?
+        string dimname = name + "_strlen";
+        int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[2]);
+        error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
 
-        int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
+        res = nc_def_var(ncid, name.c_str(), NC_CHAR, 3, dims, &nc_varid);
         error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
 
         add_common_attributes(ncid);
@@ -352,68 +459,31 @@ struct MultiValArray : public BaseValArray
 
         size_t arrsize = get_max_rep();
         size_t start[] = {0, 0, 0};
-        size_t count[] = {1, arrsize, 0};
+        size_t count[] = {1, arrsize, info->len};
 
-        if (info->is_string())
+        char missing[info->len]; // Missing value
+        memset(missing, NC_FILL_CHAR, info->len);
+
+        char value[info->len]; // Space-padded value
+        for (size_t i = 0; i < arrs.size(); ++i)
         {
-            count[2] = info->len;
-            char missing[info->len]; // Missing value
-            memset(missing, NC_FILL_CHAR, info->len);
-            char value[info->len]; // Space-padded value
-            for (size_t i = 0; i < arrs.size(); ++i)
+            const vector<string>& v = arrs[i];
+            start[0] = i;
+            for (size_t j = 0; j < arrsize; ++j)
             {
-                const SingleValArray& va = arrs[i];
-                start[0] = i;
-                for (size_t j = 0; j < arrsize; ++j)
+                int res;
+                if (j >= v.size() || v[j].empty())
+                    res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
+                else
                 {
-                    int res;
-                    if (va.vars.size() > j && va.vars[j].isset())
-                    {
-                        size_t len = strlen(va.vars[j].value());
-                        memcpy(value, va.vars[j].value(), len);
-                        for (size_t i = len; i < info->len; ++i)
-                            value[i] = ' ';
-                        res = nc_put_vara_text(ncid, nc_varid, start, count, value);
-                    } else
-                        res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
-                    error_netcdf::throwf_iferror(res, "storing %zd string values", arrsize);
+                    memcpy(value, v[j].data(), v[j].size());
+                    for (size_t k = v[j].size(); k < info->len; ++k)
+                        value[k] = ' ';
+                    res = nc_put_vara_text(ncid, nc_varid, start, count, value);
                 }
+                error_netcdf::throwf_iferror(res, "storing %zd string values", arrsize);
             }
         }
-        else if (info->scale == 0)
-        {
-            int vals[arrsize];
-            for (unsigned i = 0; i < arrs.size(); ++i)
-            {
-                const SingleValArray& va = arrs[i];
-                va.fill_int(vals, arrsize);
-                start[0] = i;
-                int res = nc_put_vara_int(ncid, nc_varid, start, count, vals);
-                error_netcdf::throwf_iferror(res, "storing %zd integer values", arrsize);
-            }
-        }
-        else
-        {
-            float vals[arrsize];
-            for (unsigned i = 0; i < arrs.size(); ++i)
-            {
-                const SingleValArray& va = arrs[i];
-                va.fill_float(vals, arrsize);
-                start[0] = i;
-                int res = nc_put_vara_float(ncid, nc_varid, start, count, vals);
-                error_netcdf::throwf_iferror(res, "storing %zd float values", arrsize);
-            }
-        }
-    }
-
-    void dump(FILE* out)
-    {
-        for (size_t a = 0; a < arrs.size(); ++a)
-            for (size_t i = 0; i < arrs[1].vars.size(); ++i)
-            {
-                string formatted = arrs[a].vars[i].format();
-                fprintf(out, "%s[%zd,%zd]: %s\n", name.c_str(), a, i, formatted.c_str());
-            }
     }
 };
 
@@ -543,6 +613,16 @@ void Arrays::start(const std::string& tag)
     namer->start(tag);
 }
 
+static ValArray* make_multivalarray(Varinfo info, const Arrays::LoopInfo& loopinfo)
+{
+    if (info->is_string())
+        return new MultiStringValArray(info, loopinfo);
+    else if (info->scale == 0)
+        return new MultiIntValArray(info, loopinfo);
+    else
+        return new MultiFloatValArray(info, loopinfo);
+}
+
 ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::string& tag)
 {
     string name, mnemo;
@@ -556,12 +636,19 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
     // Create a new array
     auto_ptr<ValArray> arr;
     if (tag.empty())
-        arr.reset(new SingleValArray(var.info()));
+    {
+        if (var.info()->is_string())
+            arr.reset(new SingleStringValArray(var.info()));
+        else if (var.info()->scale == 0)
+            arr.reset(new SingleIntValArray(var.info()));
+        else
+            arr.reset(new SingleFloatValArray(var.info()));
+    }
     else
     {
         map<string, LoopInfo>::const_iterator i = dimnames.find(tag);
         if (i != dimnames.end())
-            arr.reset(new MultiValArray(var.info(), i->second));
+            arr.reset(make_multivalarray(var.info(), i->second));
         else
         {
             char buf[20];
@@ -569,7 +656,7 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
             ++loop_idx;
             pair<std::map<std::string, LoopInfo>::iterator, bool> res =
                 dimnames.insert(make_pair(tag, LoopInfo(buf, arrays.size())));
-            arr.reset(new MultiValArray(var.info(), res.first->second));
+            arr.reset(make_multivalarray(var.info(), res.first->second));
         }
     }
     arr->name = name;
