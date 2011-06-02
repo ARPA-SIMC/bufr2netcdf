@@ -34,7 +34,9 @@ namespace b2nc {
 
 struct BaseValArray : public ValArray
 {
-    void add_common_attributes(int ncid, Varinfo info)
+    BaseValArray(Varinfo info) : ValArray(info) {}
+
+    void add_common_attributes(int ncid)
     {
         int res;
         if (info->is_string())
@@ -115,6 +117,8 @@ struct SingleValArray : public BaseValArray
 {
     std::vector<Var> vars;
 
+    SingleValArray(Varinfo info) : BaseValArray(info) {}
+
     void add(const Var& var, unsigned bufr_idx=0)
     {
         while (vars.size() < bufr_idx)
@@ -123,11 +127,11 @@ struct SingleValArray : public BaseValArray
             vars.push_back(Var(var, false));
     }
 
-    const Var* get_var(unsigned bufr_idx, unsigned rep) const
+    Var get_var(unsigned bufr_idx, unsigned rep) const
     {
-        if (rep > 0) return NULL;
-        if (bufr_idx >= vars.size()) return NULL;
-        return &vars[bufr_idx];
+        if (rep > 0) return Var(info);
+        if (bufr_idx >= vars.size()) return Var(info);
+        return vars[bufr_idx];
     }
 
     size_t get_size() const
@@ -169,7 +173,7 @@ struct SingleValArray : public BaseValArray
         int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
         error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
 
-        add_common_attributes(ncid, info);
+        add_common_attributes(ncid);
 
         return nc_varid;
     }
@@ -271,22 +275,22 @@ struct MultiValArray : public BaseValArray
     std::vector<SingleValArray> arrs;
     const Arrays::LoopInfo& loopinfo;
 
-    MultiValArray(const Arrays::LoopInfo& loopinfo) : loopinfo(loopinfo) {}
+    MultiValArray(Varinfo info, const Arrays::LoopInfo& loopinfo) : BaseValArray(info), loopinfo(loopinfo) {}
 
     void add(const wreport::Var& var, unsigned bufr_idx)
     {
         // Ensure we have the right number of dimensions
         while (bufr_idx >= arrs.size())
-            arrs.push_back(SingleValArray());
+            arrs.push_back(SingleValArray(info));
 
         arrs[bufr_idx].add(var, arrs[bufr_idx].get_size());
     }
 
-    const Var* get_var(unsigned bufr_idx, unsigned rep=0) const
+    Var get_var(unsigned bufr_idx, unsigned rep=0) const
     {
-        if (bufr_idx >= arrs.size()) return NULL;
-        if (rep >= arrs[bufr_idx].vars.size()) return NULL;
-        return &arrs[bufr_idx].vars[rep];
+        if (bufr_idx >= arrs.size()) return Var(info);
+        if (rep >= arrs[bufr_idx].vars.size()) return Var(info);
+        return arrs[bufr_idx].vars[rep];
     }
 
     size_t get_size() const
@@ -318,7 +322,6 @@ struct MultiValArray : public BaseValArray
         int dims[3] = { bufrdim, loopinfo.nc_dimid, 0 };
         int ndims = 2;
         nc_type type;
-        Varinfo info = get_var(0, 0)->info();
         if (info->is_string())
         {
             string dimname = name + "_strlen";
@@ -335,7 +338,7 @@ struct MultiValArray : public BaseValArray
         int res = nc_def_var(ncid, name.c_str(), type, ndims, dims, &nc_varid);
         error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
 
-        add_common_attributes(ncid, info);
+        add_common_attributes(ncid);
 
         res = nc_put_att_text(ncid, nc_varid, "dim1_length", strlen("_constant"), "_constant"); // TODO
         error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", name.c_str());
@@ -351,7 +354,6 @@ struct MultiValArray : public BaseValArray
         size_t start[] = {0, 0, 0};
         size_t count[] = {1, arrsize, 0};
 
-        Varinfo info = get_var(0, 0)->info();
         if (info->is_string())
         {
             count[2] = info->len;
@@ -554,12 +556,12 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
     // Create a new array
     auto_ptr<ValArray> arr;
     if (tag.empty())
-        arr.reset(new SingleValArray);
+        arr.reset(new SingleValArray(var.info()));
     else
     {
         map<string, LoopInfo>::const_iterator i = dimnames.find(tag);
         if (i != dimnames.end())
-            arr.reset(new MultiValArray(i->second));
+            arr.reset(new MultiValArray(var.info(), i->second));
         else
         {
             char buf[20];
@@ -567,7 +569,7 @@ ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::stri
             ++loop_idx;
             pair<std::map<std::string, LoopInfo>::iterator, bool> res =
                 dimnames.insert(make_pair(tag, LoopInfo(buf, arrays.size())));
-            arr.reset(new MultiValArray(res.first->second));
+            arr.reset(new MultiValArray(var.info(), res.first->second));
         }
     }
     arr->name = name;
@@ -687,11 +689,11 @@ void Arrays::putvar(int ncid) const
         int values[size];
         for (size_t i = 0; i < size; ++i)
         {
-            const Var* vy = date_year->get_var(i, 0);
-            const Var* vm = date_month->get_var(i, 0);
-            const Var* vd = date_day->get_var(i, 0);
-            if (vy->isset() && vm->isset() && vd->isset())
-                values[i] = vy->enqi() * 10000 + vm->enqi() * 100 + vd->enqi();
+            Var vy = date_year->get_var(i, 0);
+            Var vm = date_month->get_var(i, 0);
+            Var vd = date_day->get_var(i, 0);
+            if (vy.isset() && vm.isset() && vd.isset())
+                values[i] = vy.enqi() * 10000 + vm.enqi() * 100 + vd.enqi();
             else
                 values[i] = NC_FILL_INT;
         }
@@ -708,14 +710,20 @@ void Arrays::putvar(int ncid) const
         int values[size];
         for (size_t i = 0; i < size; ++i)
         {
-            const Var* th = time_hour->get_var(i, 0);
-            const Var* tm = time_minute ? time_minute->get_var(i, 0) : 0;
-            const Var* ts = time_second ? time_second->get_var(i, 0) : 0;
-            if (th->isset())
+            Var th = time_hour->get_var(i, 0);
+            if (th.isset())
             {
-                values[i] = th->enqi() * 10000;
-                if (tm && tm->isset()) values[i] += tm->enqi() * 100;
-                if (ts && ts->isset()) values[i] += ts->enqi();
+                values[i] = th.enqi() * 10000;
+                if (time_minute)
+                {
+                    Var tm = time_minute->get_var(i, 0);
+                    if (tm.isset()) values[i] += tm.enqi() * 100;
+                }
+                if (time_second)
+                {
+                   Var ts = time_second->get_var(i, 0);
+                   if (ts.isset()) values[i] += ts.enqi();
+                }
             }
             else
                 values[i] = NC_FILL_INT;

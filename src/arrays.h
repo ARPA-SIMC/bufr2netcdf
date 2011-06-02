@@ -23,6 +23,7 @@
 #define B2NC_ARRAYS_H
 
 #include "namer.h"
+#include <wreport/varinfo.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -41,15 +42,17 @@ struct ValArray
 {
     std::string name;
     std::string mnemo;
+    wreport::Varinfo info;
     unsigned rcnt;
     int nc_varid;
     std::vector< std::pair<wreport::Varcode, std::string> > references;
 
+    ValArray(wreport::Varinfo info) : info(info) {}
     virtual ~ValArray() {}
     virtual void add(const wreport::Var& var, unsigned bufr_idx) = 0;
 
     /// Returns the variable for the given BUFR and repetition instance
-    virtual const wreport::Var* get_var(unsigned bufr_idx, unsigned rep=0) const = 0;
+    virtual wreport::Var get_var(unsigned bufr_idx, unsigned rep=0) const = 0;
 
     /// Returns the array size (number of BUFR messages seen)
     virtual size_t get_size() const = 0;

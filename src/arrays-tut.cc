@@ -66,7 +66,6 @@ static void read_bufr(Arrays& a, const std::string& testname)
 template<> template<>
 void to::test<1>()
 {
-    const Var* var;
     Arrays arrays;
     read_bufr(arrays, "cdfin_acars");
 
@@ -81,13 +80,11 @@ void to::test<1>()
     ensure_equals(arrays.arrays[39]->get_size(), 133);
     ensure_equals(arrays.arrays[39]->get_max_rep(), 1);
 
-    var = arrays.arrays[4]->get_var(0, 0);
-    ensure(var != NULL);
-    ensure_equals(var->enqd(), 48.45500);
+    Var var = arrays.arrays[4]->get_var(0, 0);
+    ensure_equals(var.enqd(), 48.45500);
 
     var = arrays.arrays[4]->get_var(132, 0);
-    ensure(var != NULL);
-    ensure_equals(var->enqd(), 46.16833);
+    ensure_equals(var.enqd(), 46.16833);
 
     //arrays.dump(stderr);
 }
@@ -95,7 +92,6 @@ void to::test<1>()
 template<> template<>
 void to::test<2>()
 {
-    const Var* var;
     Arrays arrays;
     read_bufr(arrays, "cdfin_gps_zenith");
 
@@ -113,21 +109,18 @@ void to::test<2>()
     ensure_equals(arrays.arrays[30]->get_size(), 94u);
     ensure_equals(arrays.arrays[30]->get_max_rep(), 1);
 
-    var = arrays.arrays[16]->get_var(0, 0);
-    ensure(var != NULL);
-    ensure(!var->isset());
+    Var var = arrays.arrays[16]->get_var(0, 0);
+    ensure(!var.isset());
 
     var = arrays.arrays[16]->get_var(93, 24);
-    ensure(var != NULL);
-    ensure(!var->isset());
+    ensure(!var.isset());
 
     var = arrays.arrays[16]->get_var(94, 25);
-    ensure(var == NULL);
+    ensure(!var.isset());
 
     var = arrays.arrays[18]->get_var(0, 0);
-    ensure(var != NULL);
-    ensure(var->isset());
-    ensure_equals(var->enqi(), 0);
+    ensure(var.isset());
+    ensure_equals(var.enqi(), 0);
 
     //arrays.dump(stderr);
 }
