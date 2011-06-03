@@ -126,6 +126,19 @@ struct BaseValArray : public ValArray
             error_netcdf::throwf_iferror(res, "setting references attribute for %s", name.c_str());
         }
 
+        if (!slaves.empty())
+        {
+            // FIXME: this way of setting string array attributes in NetCDF
+            // does not work: if we have to generate NetCDF variables with
+            // multiple associated fields, we'll see how to do it
+
+            //const char* fnames[slaves.size()];
+            //for (size_t i = 0; i < slaves.size(); ++i)
+            //    fnames[i] = slaves[i]->name.c_str();
+            //res = nc_put_att_string(ncid, nc_varid, "associated_field", slaves.size(), fnames);
+            res = nc_put_att_text(ncid, nc_varid, "associated_field", slaves[0]->name.size(), slaves[0]->name.data());
+            error_netcdf::throwf_iferror(res, "setting associated_field attribute for %s", this->name.c_str());
+        }
     }
 };
 

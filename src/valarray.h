@@ -54,6 +54,7 @@ struct ValArray
     std::vector< std::pair<wreport::Varcode, std::string> > references;
     Namer::DataType type;
     ValArray* master;
+    std::vector<ValArray*> slaves;
 
     ValArray(wreport::Varinfo info) : info(info) {}
     virtual ~ValArray() {}

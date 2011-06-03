@@ -201,6 +201,8 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
     arr->rcnt = rcnt;
     arr->type = type;
     arr->master = master;
+    if (master)
+        master->slaves.push_back(arr.get());
     arrays.push_back(arr.release());
     byname[name] = arrays.size() - 1;
 
