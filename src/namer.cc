@@ -34,15 +34,17 @@ using namespace std;
 
 namespace b2nc {
 
-const char* Namer::DT_DATA = "Data";
-const char* Namer::DT_QBITS = "QBits";
-const char* Namer::DT_CHAR = "Char";
-const char* Namer::DT_QAINFO = "QAInfo";
-
 const char* Namer::ENV_TABLE_DIR = "B2NC_TABLES";
 const char* Namer::DEFAULT_TABLE_DIR = "/usr/share/bufr2netcdf";
 
 namespace {
+
+static const char* type_names[] = {
+    "Data",
+    "QBits",
+    "Char",
+    "QAInfo",
+   };
 
 struct SeenCounter
 {
@@ -92,6 +94,21 @@ struct Counter
     }
 };
 
+struct CounterSet : public std::map<string, Counter>
+{
+    SeenCounter seen_counter;
+
+    Counter& get_counter(const std::string& tag)
+    {
+        iterator i = find(tag);
+        if (i != end())
+            return i->second;
+        pair<iterator, bool> res = insert(
+                make_pair(tag, Counter(seen_counter)));
+        return res.first->second;
+    }
+};
+
 /**
  * Type_FXXYYY_RRR style namer
  */
@@ -99,8 +116,7 @@ class PlainNamer : public Namer
 {
 protected:
     const mnemo::Table* table;
-    SeenCounter seen_counter;
-    std::map<string, Counter> counters;
+    CounterSet counters[DT_MAX];
 
 public:
     PlainNamer()
@@ -109,32 +125,23 @@ public:
         table = mnemo::Table::get(14);
     }
 
-    Counter& get_counter(const std::string& tag)
-    {
-        std::map<string, Counter>::iterator i = counters.find(tag);
-        if (i != counters.end())
-            return i->second;
-        pair<std::map<string, Counter>::iterator, bool> res = counters.insert(
-                make_pair(tag, Counter(seen_counter)));
-        return res.first->second;
-    }
-
     virtual void start(const std::string& tag)
     {
-        get_counter(tag).reset();
+        for (int i = 0; i < DT_MAX; ++i)
+            counters[i].get_counter(tag).reset();
     }
 
-    virtual unsigned name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
+    virtual unsigned name(DataType type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
     {
         // Get/create counter for this tag
-        Counter& counter = get_counter(tag);
+        Counter& counter = counters[type].get_counter(tag);
         unsigned index = counter.get_index(code);
 
         // Plain name
         {
             char buf[20];
             snprintf(buf, 20, "%s_%c%02d%03d_%03d",
-                    type,
+                    type_names[type],
                     "BRCD"[WR_VAR_F(code)],
                     WR_VAR_X(code),
                     WR_VAR_Y(code),
@@ -163,7 +170,7 @@ public:
 
 struct MnemoNamer : public PlainNamer
 {
-    virtual unsigned name(const char* type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
+    virtual unsigned name(DataType type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
     {
         unsigned index = PlainNamer::name(type, code, tag, name, mnemo);
         if (!mnemo.empty())

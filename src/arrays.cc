@@ -158,7 +158,7 @@ void Arrays::start(const std::string& tag)
     namer->start(tag);
 }
 
-ValArray& Arrays::get_valarray(const char* type, const Var& var, const std::string& tag)
+ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::string& tag)
 {
     string name, mnemo;
     unsigned rcnt = namer->name(type, var.code(), tag, name, mnemo);

@@ -35,10 +35,13 @@ struct Namer
         MNEMONIC,
     };
 
-    static const char* DT_DATA;
-    static const char* DT_QBITS;
-    static const char* DT_CHAR;
-    static const char* DT_QAINFO;
+    enum DataType {
+        DT_DATA   = 0,
+        DT_QBITS  = 1,
+        DT_CHAR   = 2,
+        DT_QAINFO = 3,
+        DT_MAX    = 4,
+    };
 
     static const char* ENV_TABLE_DIR;
     static const char* DEFAULT_TABLE_DIR;
@@ -61,7 +64,7 @@ struct Namer
      * @returns the number of time the given code has been seen in the message,
      *   excluding repetitions
      */
-    virtual unsigned name(const char* type, wreport::Varcode code, const std::string& tag, std::string& name, std::string& mnemo) = 0;
+    virtual unsigned name(DataType type, wreport::Varcode code, const std::string& tag, std::string& name, std::string& mnemo) = 0;
 
     /**
      * Get a namer by type.
