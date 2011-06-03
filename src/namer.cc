@@ -153,13 +153,19 @@ public:
         const char* mname = table->find(code);
         if (mname)
         {
-            if (index == 0)
-                mnemo = mname;
-            else
+            mnemo = mname;
+
+            if (index > 0)
             {
                 char buf[20];
-                snprintf(buf, 20, "%s%d", mname, index-1);
-                mnemo = buf;
+                snprintf(buf, 20, "%d", index-1);
+                mnemo += buf;
+            }
+
+            switch (type)
+            {
+                case DT_QBITS: mnemo += "Q"; break;
+                default: break;
             }
         } else
             mnemo.clear();

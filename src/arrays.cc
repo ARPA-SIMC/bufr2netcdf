@@ -108,6 +108,12 @@ public:
         ValArray& arr = arrays.get_valarray(Namer::DT_DATA, var, tag);
         arr.add(var, bufr_idx);
 
+        if (const Var* a = var.enqa(WR_VAR(0, 33, 50)))
+        {
+            ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, a);
+            attr_arr.add(*a, bufr_idx);
+        }
+
         // Add references information to arr
         if (arr.references.empty())
             for (map<Varcode, string>::const_iterator i = context.begin();
@@ -158,7 +164,7 @@ void Arrays::start(const std::string& tag)
     namer->start(tag);
 }
 
-ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::string& tag)
+ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::string& tag, const Var* attr)
 {
     string name, mnemo;
     unsigned rcnt = namer->name(type, var.code(), tag, name, mnemo);
@@ -168,15 +174,18 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
         // Reuse array
         return *arrays[i->second];
 
+    // Use attr as the real info for the variable, defaulting to var.info()
+    Varinfo info = attr ? attr->info() : var.info();
+
     // Create a new array
     auto_ptr<ValArray> arr;
     if (tag.empty())
-        arr.reset(ValArray::make_singlevalarray(var.info()));
+        arr.reset(ValArray::make_singlevalarray(type, info));
     else
     {
         map<string, LoopInfo>::const_iterator i = dimnames.find(tag);
         if (i != dimnames.end())
-            arr.reset(ValArray::make_multivalarray(var.info(), i->second));
+            arr.reset(ValArray::make_multivalarray(type, info, i->second));
         else
         {
             char buf[20];
@@ -184,7 +193,7 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
             ++loop_idx;
             pair<std::map<std::string, LoopInfo>::iterator, bool> res =
                 dimnames.insert(make_pair(tag, LoopInfo(buf, arrays.size())));
-            arr.reset(ValArray::make_multivalarray(var.info(), res.first->second));
+            arr.reset(ValArray::make_multivalarray(type, info, res.first->second));
         }
     }
     arr->name = name;

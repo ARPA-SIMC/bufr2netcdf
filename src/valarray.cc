@@ -22,6 +22,7 @@
 #include "valarray.h"
 #include "utils.h"
 #include "mnemo.h"
+#include <wreport/error.h>
 #include <wreport/var.h>
 #include <netcdf.h>
 #include <cstring>
@@ -487,24 +488,40 @@ struct MultiStringValArray : public MultiValArray<std::string>
 };
 
 
-ValArray* ValArray::make_singlevalarray(Varinfo info)
+ValArray* ValArray::make_singlevalarray(Namer::DataType type, Varinfo info)
 {
-    if (info->is_string())
-        return new SingleStringValArray(info);
-    else if (info->scale == 0)
-        return new SingleIntValArray(info);
-    else
-        return new SingleFloatValArray(info);
+    switch (type)
+    {
+        case Namer::DT_DATA:
+            if (info->is_string())
+                return new SingleStringValArray(info);
+            else if (info->scale == 0)
+                return new SingleIntValArray(info);
+            else
+                return new SingleFloatValArray(info);
+        case Namer::DT_QBITS:
+            return new SingleIntValArray(info);
+        default:
+            throw error_unimplemented("only Data and QBits storages are supported so far");
+    }
 }
 
-ValArray* ValArray::make_multivalarray(Varinfo info, const LoopInfo& loopinfo)
+ValArray* ValArray::make_multivalarray(Namer::DataType type, Varinfo info, const LoopInfo& loopinfo)
 {
-    if (info->is_string())
-        return new MultiStringValArray(info, loopinfo);
-    else if (info->scale == 0)
-        return new MultiIntValArray(info, loopinfo);
-    else
-        return new MultiFloatValArray(info, loopinfo);
+    switch (type)
+    {
+        case Namer::DT_DATA:
+            if (info->is_string())
+                return new MultiStringValArray(info, loopinfo);
+            else if (info->scale == 0)
+                return new MultiIntValArray(info, loopinfo);
+            else
+                return new MultiFloatValArray(info, loopinfo);
+        case Namer::DT_QBITS:
+            return new MultiIntValArray(info, loopinfo);
+        default:
+            throw error_unimplemented("only Data and QBits storages are supported so far");
+    }
 }
 
 }

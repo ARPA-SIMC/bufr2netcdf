@@ -71,8 +71,8 @@ struct ValArray
 
     virtual void dump(FILE* out) = 0;
 
-    static ValArray* make_singlevalarray(wreport::Varinfo info);
-    static ValArray* make_multivalarray(wreport::Varinfo info, const LoopInfo& loopinfo);
+    static ValArray* make_singlevalarray(Namer::DataType type, wreport::Varinfo info);
+    static ValArray* make_multivalarray(Namer::DataType type, wreport::Varinfo info, const LoopInfo& loopinfo);
 };
 
 }
