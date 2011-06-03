@@ -110,7 +110,7 @@ public:
 
         if (const Var* a = var.enqa(WR_VAR(0, 33, 50)))
         {
-            ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, a);
+            ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, a, &arr);
             attr_arr.add(*a, bufr_idx);
         }
 
@@ -164,7 +164,7 @@ void Arrays::start(const std::string& tag)
     namer->start(tag);
 }
 
-ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::string& tag, const Var* attr)
+ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::string& tag, const Var* attr, ValArray* master)
 {
     string name, mnemo;
     unsigned rcnt = namer->name(type, var.code(), tag, name, mnemo);
@@ -199,6 +199,7 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
     arr->name = name;
     arr->mnemo = mnemo;
     arr->rcnt = rcnt;
+    arr->master = master;
     arrays.push_back(arr.release());
     byname[name] = arrays.size() - 1;
 

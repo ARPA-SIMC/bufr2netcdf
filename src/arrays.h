@@ -65,7 +65,7 @@ struct Arrays
     ~Arrays();
 
     void start(const std::string& tag);
-    ValArray& get_valarray(Namer::DataType type, const wreport::Var& var, const std::string& tag, const wreport::Var* attr=0);
+    ValArray& get_valarray(Namer::DataType type, const wreport::Var& var, const std::string& tag, const wreport::Var* attr=0, ValArray* master=0);
 
     /**
      * Adds all the subsets for a bulletin.
