@@ -54,6 +54,7 @@ protected:
     map<Varcode, string> context;
     string tag;
     int& bufr_idx;
+    ValArray* loop_var;
 
     void update_tag()
     {
@@ -69,7 +70,7 @@ protected:
 
 public:
     ArrayBuilder(const Bulletin& bulletin, Arrays& arrays, int& bufr_idx)
-        : bulletin::ConstBaseDDSExecutor(bulletin), arrays(arrays), rep_nesting(0), bufr_idx(bufr_idx) {}
+        : bulletin::ConstBaseDDSExecutor(bulletin), arrays(arrays), rep_nesting(0), bufr_idx(bufr_idx), loop_var(0) {}
 
     virtual void start_subset(unsigned subset_no)
     {
@@ -80,6 +81,7 @@ public:
         update_tag();
         arrays.start(tag);
         ++bufr_idx;
+        loop_var = 0;
     }
 
     virtual void push_repetition(unsigned length, unsigned count)
@@ -100,6 +102,7 @@ public:
     {
         --rep_nesting;
         update_tag();
+        loop_var = 0;
     }
 
     virtual void encode_var(Varinfo info, unsigned var_pos)
@@ -108,10 +111,21 @@ public:
         ValArray& arr = arrays.get_valarray(Namer::DT_DATA, var, tag);
         arr.add(var, bufr_idx);
 
+        if (arr.newly_created)
+        {
+            arr.loop_var = loop_var;
+            arr.newly_created = false;
+        }
+
         if (const Var* a = var.enqa(WR_VAR(0, 33, 50)))
         {
             ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, a, &arr);
             attr_arr.add(*a, bufr_idx);
+            if (attr_arr.newly_created)
+            {
+                arr.loop_var = loop_var;
+                attr_arr.newly_created = false;
+            }
         }
 
         // Add references information to arr
@@ -134,6 +148,16 @@ public:
                     context[var.code()] = arr.name;
                     break;
             }
+        if (WR_VAR_X(var.code()) == 31)
+        {
+            switch (var.code())
+            {
+                case WR_VAR(0, 31, 1):
+                case WR_VAR(0, 31, 2):
+                    loop_var = &arr;
+                    break;
+            }
+        }
     }
 
     virtual void encode_char_data(Varcode code, unsigned var_pos)

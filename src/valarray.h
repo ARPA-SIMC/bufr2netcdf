@@ -55,8 +55,14 @@ struct ValArray
     Namer::DataType type;
     ValArray* master;
     std::vector<ValArray*> slaves;
+    ValArray* loop_var;
+    // True if the value of the variable never changes
+    bool is_constant;
+    // Marker for newly created arrays, possibly still in need of
+    // initialisation
+    bool newly_created;
 
-    ValArray(wreport::Varinfo info) : info(info) {}
+    ValArray(wreport::Varinfo info) : info(info), loop_var(0), is_constant(true), newly_created(true) {}
     virtual ~ValArray() {}
     virtual void add(const wreport::Var& var, unsigned bufr_idx) = 0;
 

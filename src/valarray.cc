@@ -146,18 +146,26 @@ template<typename TYPE>
 struct SingleValArray : public BaseValArray
 {
     std::vector<TYPE> vars;
+    TYPE last_val;
 
-    SingleValArray(Varinfo info) : BaseValArray(info) {}
+    SingleValArray(Varinfo info) : BaseValArray(info), last_val(nc_fill<TYPE>()) {}
 
     size_t get_size() const { return vars.size(); }
     size_t get_max_rep() const { return 1; }
 
     void add(const Var& var, unsigned bufr_idx=0)
     {
+        bool is_first = vars.empty();
+
         while (bufr_idx >= vars.size())
             vars.push_back(nc_fill<TYPE>());
         if (var.isset())
             vars[bufr_idx] = var.enq<TYPE>();
+
+        if (is_first)
+            last_val = vars[bufr_idx];
+        else if (is_constant && last_val != vars[bufr_idx])
+            is_constant = false;
     }
 
     Var get_var(unsigned bufr_idx, unsigned rep) const
@@ -289,9 +297,10 @@ struct MultiValArray : public BaseValArray
 {
     std::vector< std::vector<TYPE> > arrs;
     const LoopInfo& loopinfo;
+    TYPE last_val;
 
     MultiValArray(Varinfo info, const LoopInfo& loopinfo)
-        : BaseValArray(info), loopinfo(loopinfo) {}
+        : BaseValArray(info), loopinfo(loopinfo), last_val(nc_fill<TYPE>()) {}
 
     void add(const wreport::Var& var, unsigned bufr_idx)
     {
@@ -299,11 +308,18 @@ struct MultiValArray : public BaseValArray
         while (bufr_idx >= arrs.size())
             arrs.push_back(vector<TYPE>());
 
+        bool is_first = arrs.empty();
+
         // Append to the right bufr values
         if (var.isset())
             arrs[bufr_idx].push_back(var.enq<TYPE>());
         else
             arrs[bufr_idx].push_back(nc_fill<TYPE>());
+
+        if (is_first)
+            last_val = arrs[bufr_idx].back();
+        else if (is_constant && last_val != arrs[bufr_idx].back())
+            is_constant = false;
     }
 
     Var get_var(unsigned bufr_idx, unsigned rep=0) const
@@ -364,7 +380,11 @@ struct MultiNumberValArray : public MultiValArray<TYPE>
 
         this->add_common_attributes(ncid);
 
-        res = nc_put_att_text(ncid, this->nc_varid, "dim1_length", strlen("_constant"), "_constant"); // TODO
+        // Only set to loop_var_name if it changes across BUFRs
+        string dimlenname = "_constant";
+        if (this->loop_var && !this->loop_var->is_constant)
+            dimlenname = this->loop_var->name;
+        res = nc_put_att_text(ncid, this->nc_varid, "dim1_length", dimlenname.size(), dimlenname.data());
         error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", this->name.c_str());
 
         return true;
