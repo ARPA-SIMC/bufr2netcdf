@@ -70,6 +70,11 @@ struct Namer
      * Get a namer by type.
      */
     static std::auto_ptr<Namer> get(Type type);
+
+    /**
+     * Get the string name for a type
+     */
+    static const char* type_name(DataType type);
 };
 
 

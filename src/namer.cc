@@ -187,6 +187,10 @@ struct MnemoNamer : public PlainNamer
 
 }
 
+const char* Namer::type_name(DataType type)
+{
+    return type_names[type];
+}
 
 auto_ptr<Namer> Namer::get(Type type)
 {

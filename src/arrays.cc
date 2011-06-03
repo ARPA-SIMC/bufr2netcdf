@@ -199,6 +199,7 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
     arr->name = name;
     arr->mnemo = mnemo;
     arr->rcnt = rcnt;
+    arr->type = type;
     arr->master = master;
     arrays.push_back(arr.release());
     byname[name] = arrays.size() - 1;

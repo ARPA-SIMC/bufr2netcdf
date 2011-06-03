@@ -75,7 +75,8 @@ struct BaseValArray : public ValArray
         res = nc_put_att_text(ncid, nc_varid, "units", strlen(info->unit), info->unit);
         error_netcdf::throwf_iferror(res, "setting unit attribute for %s", name.c_str());
 
-        res = nc_put_att_text(ncid, nc_varid, "type", strlen("Data"), "Data"); // TODO
+        const char* tname = Namer::type_name(type);
+        res = nc_put_att_text(ncid, nc_varid, "type", strlen(tname), tname);
         error_netcdf::throwf_iferror(res, "setting type attribute for %s", name.c_str());
 
         int ifxy;

@@ -52,6 +52,7 @@ struct ValArray
     unsigned rcnt;
     int nc_varid;
     std::vector< std::pair<wreport::Varcode, std::string> > references;
+    Namer::DataType type;
     ValArray* master;
 
     ValArray(wreport::Varinfo info) : info(info) {}
