@@ -155,6 +155,7 @@ template<> template<>
 void to::test<1>()
 {
     Convtest t("cdfin_acars");
+    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_acars\"");
     t.convert();
 }
 
