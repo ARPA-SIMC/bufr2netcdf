@@ -136,18 +136,8 @@ public:
 
         // Update current context information
         if (WR_VAR_X(var.code()) < 10)
-            switch (var.code())
-            {
-                case WR_VAR(0, 1, 23):
-                case WR_VAR(0, 1, 33):
-                case WR_VAR(0, 8,  9):
-                    // TODO: The test cases don't encode these: we skip them
-                    // until we work out why they don't do it
-                    break;
-                default:
-                    context[var.code()] = arr.name;
-                    break;
-            }
+            context[var.code()] = arr.name;
+
         if (WR_VAR_X(var.code()) == 31)
         {
             switch (var.code())
