@@ -129,8 +129,6 @@ struct OutfileImpl : public Outfile
 
     virtual void add_bufr(const wreport::BufrBulletin& bulletin)
     {
-        // TODO: if first, build metadata
-
         arrays.add(bulletin);
 
         for (vector<Subset>::const_iterator si = bulletin.subsets.begin();
@@ -159,7 +157,6 @@ struct OutfileImpl : public Outfile
 
     virtual void close()
     {
-        // TODO: add arrays to NetCDF
         int res;
 
         // Define dimensions
@@ -185,8 +182,6 @@ struct OutfileImpl : public Outfile
         sec1.define(ncid, dim_bufr_records);
         sec2.define(ncid, dim_bufr_records);
         arrays.define(ncid, dim_bufr_records);
-
-        // TODO nc_put_att       /* put attribute: assign attribute values */
 
         // End define mode
         res = nc_enddef(ncid);
