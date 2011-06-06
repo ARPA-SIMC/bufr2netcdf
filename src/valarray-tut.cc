@@ -32,8 +32,12 @@ namespace tut {
 
 struct valarray_shar
 {
+    const Vartable* table;
+
     valarray_shar()
     {
+        table = Vartable::get("B0000000000000014000");
+        ensure(table);
     }
 
     ~valarray_shar()
@@ -45,6 +49,18 @@ TESTGRP(valarray);
 template<> template<>
 void to::test<1>()
 {
+    Var var(table->query(WR_VAR(0, 1, 1)));
+    auto_ptr<ValArray> arr(ValArray::make_singlevalarray(Namer::DT_DATA, var.info()));
+    // TODO
+}
+
+template<> template<>
+void to::test<2>()
+{
+    LoopInfo loopinfo("foo", 0);
+    Var var(table->query(WR_VAR(0, 1, 15)));
+    auto_ptr<ValArray> arr(ValArray::make_multivalarray(Namer::DT_DATA, var.info(), loopinfo));
+    // TODO
 }
 
 }

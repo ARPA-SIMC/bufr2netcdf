@@ -125,6 +125,28 @@ void to::test<2>()
     //arrays.dump(stderr);
 }
 
+template<> template<>
+void to::test<3>()
+{
+    Arrays arrays;
+    read_bufr(arrays, "cdfin_buoy");
+
+    //arrays.dump(stderr);
+
+    ensure_equals(arrays.arrays.size(), 107u);
+    ensure_equals(arrays.arrays[106]->name, "Char_C05008_000");
+    ensure_equals(arrays.arrays[106]->get_size(), 13u);
+    ensure_equals(arrays.arrays[106]->get_max_rep(), 2);
+
+    Var var = arrays.arrays[106]->get_var(0, 0);
+    ensure(var.isset());
+    ensure_equals(var.enq<std::string>(), "22219 61");
+
+    var = arrays.arrays[106]->get_var(0, 1);
+    ensure(var.isset());
+    ensure_equals(var.enq<std::string>(), "12/     ");
+}
+
 }
 
 // vim:set ts=4 sw=4:
