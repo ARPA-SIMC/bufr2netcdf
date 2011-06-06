@@ -155,6 +155,11 @@ public:
     {
         const Var& var = get_var(var_pos);
         ValArray& arr = arrays.get_valarray(Namer::DT_CHAR, var, tag);
+        if (arr.newly_created)
+        {
+            arr.loop_var = loop_var;
+            arr.newly_created = false;
+        }
         arr.add(var, bufr_idx);
     }
 };

@@ -268,6 +268,7 @@ void to::test<14>()
     Convtest t("cdfin_tempship");
     // MDREP is constant in this case
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP <> _constant");
+    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_tempship\"");
     t.convert();
 }
 
