@@ -221,6 +221,8 @@ template<> template<>
 void to::test<8>()
 {
     Convtest t("cdfin_pilot_p");
+    // This file was encoded ignoring the fact that MDREP always has the same value
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP <> _constant");
     t.convert();
 }
 
@@ -228,7 +230,7 @@ template<> template<>
 void to::test<9>()
 {
     Convtest t("cdfin_radar_vad");
-    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_gps_zenith\"");
+    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_radar_vad\"");
     t.convert();
 }
 
