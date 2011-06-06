@@ -97,6 +97,9 @@ void Table::load()
 
 const char* Table::find(Varcode code) const
 {
+    // This code is not in the tables, so we need to hardcode it
+    if (code == WR_VAR(2, 8, 0)) return "YSUPL";
+
     Record sample(code, "");
     const_iterator i = lower_bound(begin(), end(), sample);
     if (i == end() || i->code != code)
