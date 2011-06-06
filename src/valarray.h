@@ -34,6 +34,8 @@ struct Var;
 
 namespace b2nc {
 
+struct NCOutfile;
+
 struct LoopInfo
 {
     std::string dimname;
@@ -41,6 +43,8 @@ struct LoopInfo
     int nc_dimid;
     LoopInfo(const std::string& dimname, size_t firstarr)
         : dimname(dimname), firstarr(firstarr), nc_dimid(-1) {}
+
+    void define(NCOutfile& outfile, size_t size);
 };
 
 
@@ -62,7 +66,7 @@ struct ValArray
     // initialisation
     bool newly_created;
 
-    ValArray(wreport::Varinfo info) : info(info), loop_var(0), is_constant(true), newly_created(true) {}
+    ValArray(wreport::Varinfo info);
     virtual ~ValArray() {}
     virtual void add(const wreport::Var& var, unsigned bufr_idx) = 0;
 

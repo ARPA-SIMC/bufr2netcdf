@@ -18,10 +18,14 @@
  */
 
 #include "valarray.h"
+#include "convert.h"
+#include "utils.h"
+#include "ncoutfile.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
 #include <wreport/bulletin.h>
 #include <cstdio>
+#include <netcdf.h>
 
 using namespace b2nc;
 using namespace wreport;
@@ -29,6 +33,8 @@ using namespace wibble;
 using namespace std;
 
 namespace tut {
+
+static const char* testfname = "test-valarray.nc";
 
 struct valarray_shar
 {
@@ -60,7 +66,44 @@ void to::test<2>()
     LoopInfo loopinfo("foo", 0);
     Var var(table->query(WR_VAR(0, 1, 15)));
     auto_ptr<ValArray> arr(ValArray::make_multivalarray(Namer::DT_DATA, var.info(), loopinfo));
-    // TODO
+    arr->name = "TEST";
+    arr->mnemo = "TEST";
+    arr->rcnt = 0;
+    arr->type = Namer::DT_DATA;
+
+    // Add a 2x2 matrix of values
+    var.set("val0.0");
+    arr->add(var, 0);
+    var.set("val0.1");
+    arr->add(var, 0);
+    var.set("val1.0");
+    arr->add(var, 1);
+    var.set("val1.1");
+    arr->add(var, 1);
+
+    // Export to a NetCDF file
+    Options opts;
+    NCOutfile outfile(opts);
+    outfile.open(testfname);
+
+    loopinfo.define(outfile, 2);
+    arr->define(outfile.ncid, outfile.dim_bufr_records);
+    outfile.end_define_mode();
+    arr->putvar(outfile.ncid);
+
+    int res;
+
+    size_t start[] = {0, 0, 0};
+    size_t count[] = {0, 0, 6};
+    char buf[7];
+    res = nc_get_vara_text(outfile.ncid, arr->nc_varid, start, count, buf);
+    error_netcdf::throwf_iferror(res, "reading variable from %s", testfname);
+
+    buf[6] = 0;
+    ensure_equals(string(buf), "val0.0");
+
+
+    outfile.close();
 }
 
 }

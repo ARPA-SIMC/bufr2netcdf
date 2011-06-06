@@ -262,8 +262,7 @@ bool Arrays::define(NCOutfile& outfile)
             i != dimnames.end(); ++i)
     {
         ValArray* va = arrays[i->second.firstarr];
-        int res = nc_def_dim(ncid, i->second.dimname.c_str(), va->get_max_rep(), &i->second.nc_dimid);
-        error_netcdf::throwf_iferror(res, "creating %s dimension", i->second.dimname.c_str());
+        i->second.define(outfile, va->get_max_rep());
     }
 
     for (vector<ValArray*>::const_iterator i = arrays.begin();

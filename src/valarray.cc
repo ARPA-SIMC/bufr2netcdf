@@ -22,6 +22,7 @@
 #include "valarray.h"
 #include "utils.h"
 #include "mnemo.h"
+#include "ncoutfile.h"
 #include <wreport/error.h>
 #include <wreport/var.h>
 #include <netcdf.h>
@@ -44,6 +45,16 @@ template<> inline int nc_type<int>() { return NC_INT; }
 template<> inline int nc_type<float>() { return NC_FLOAT; }
 template<> inline int nc_type<std::string>() { return NC_CHAR; }
 
+void LoopInfo::define(NCOutfile& outfile, size_t size)
+{
+    int res = nc_def_dim(outfile.ncid, dimname.c_str(), size, &nc_dimid);
+    error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
+}
+
+ValArray::ValArray(wreport::Varinfo info)
+    : info(info), master(0), loop_var(0), is_constant(true), newly_created(true)
+{
+}
 
 struct BaseValArray : public ValArray
 {
