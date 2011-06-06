@@ -212,6 +212,8 @@ template<> template<>
 void to::test<7>()
 {
     Convtest t("cdfin_pilot");
+    // This file was encoded ignoring the fact that MDREP always has the same value
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP <> _constant");
     t.convert();
 }
 
