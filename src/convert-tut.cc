@@ -102,7 +102,7 @@ struct Convtest
         // Uncontroversial
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CODE.TABLE <> CODE TABLE [0-9]+");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : FLAG_TABLE <> FLAG TABLE [0-9]+");
-        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CCITT_IA5 <> CCITTIA5");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CCITT.IA5 <> CCITTIA5");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : DEGREE_TRUE <> DEGREE TRUE");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : PART_PER_THO <> PART PER THOUSAND");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : LOG\\(1/M\\*\\*2\\) <> LOG \\(1/M2\\)");
@@ -186,6 +186,8 @@ template<> template<>
 void to::test<5>()
 {
     Convtest t("cdfin_buoy");
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP <> _constant");
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP1 <> _constant");
     t.convert();
 }
 
