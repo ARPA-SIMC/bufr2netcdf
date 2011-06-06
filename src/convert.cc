@@ -197,44 +197,44 @@ struct NCFiller
         }
     }
 
-    void define(int ncid, int dim_bufr_records)
+    void define(NCOutfile& outfile)
     {
         // Define variables
 
-        edition.define(ncid, dim_bufr_records);
-        s1mtn.define(ncid, dim_bufr_records);
-        s1ce.define(ncid, dim_bufr_records);
-        s1sc.define(ncid, dim_bufr_records);
-        s1usn.define(ncid, dim_bufr_records);
-        s1cat.define(ncid, dim_bufr_records);
-        s1subcat.define(ncid, dim_bufr_records);
-        s1localsubcat.define(ncid, dim_bufr_records);
-        s1mtv.define(ncid, dim_bufr_records);
-        s1ltv.define(ncid, dim_bufr_records);
-        s1date.define(ncid, dim_bufr_records);
-        s1time.define(ncid, dim_bufr_records);
-        sec1.define(ncid, dim_bufr_records);
-        sec2.define(ncid, dim_bufr_records);
-        arrays.define(ncid, dim_bufr_records);
+        edition.define(outfile);
+        s1mtn.define(outfile);
+        s1ce.define(outfile);
+        s1sc.define(outfile);
+        s1usn.define(outfile);
+        s1cat.define(outfile);
+        s1subcat.define(outfile);
+        s1localsubcat.define(outfile);
+        s1mtv.define(outfile);
+        s1ltv.define(outfile);
+        s1date.define(outfile);
+        s1time.define(outfile);
+        sec1.define(outfile);
+        sec2.define(outfile);
+        arrays.define(outfile);
     }
 
-    void putvar(int ncid)
+    void putvar(NCOutfile& outfile)
     {
-        edition.putvar(ncid);
-        s1mtn.putvar(ncid);
-        s1ce.putvar(ncid);
-        s1sc.putvar(ncid);
-        s1usn.putvar(ncid);
-        s1cat.putvar(ncid);
-        s1subcat.putvar(ncid);
-        s1localsubcat.putvar(ncid);
-        s1mtv.putvar(ncid);
-        s1ltv.putvar(ncid);
-        s1date.putvar(ncid);
-        s1time.putvar(ncid);
-        sec1.putvar(ncid);
-        sec2.putvar(ncid);
-        arrays.putvar(ncid);
+        edition.putvar(outfile);
+        s1mtn.putvar(outfile);
+        s1ce.putvar(outfile);
+        s1sc.putvar(outfile);
+        s1usn.putvar(outfile);
+        s1cat.putvar(outfile);
+        s1subcat.putvar(outfile);
+        s1localsubcat.putvar(outfile);
+        s1mtv.putvar(outfile);
+        s1ltv.putvar(outfile);
+        s1date.putvar(outfile);
+        s1time.putvar(outfile);
+        sec1.putvar(outfile);
+        sec2.putvar(outfile);
+        arrays.putvar(outfile);
     }
 };
 
@@ -264,13 +264,13 @@ struct OutfileImpl : public Outfile
             return;
 
         // Define all other dimensions, variables and attributes
-        filler.define(ncout.ncid, ncout.dim_bufr_records);
+        filler.define(ncout);
 
         // End define mode
         ncout.end_define_mode();
 
         // Put variables
-        filler.putvar(ncout.ncid);
+        filler.putvar(ncout);
 
         ncout.close();
     }

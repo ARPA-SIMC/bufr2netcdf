@@ -39,6 +39,8 @@ struct Subset;
 
 namespace b2nc {
 
+struct NCOutfile;
+
 struct Arrays
 {
     Namer* namer;
@@ -72,8 +74,8 @@ struct Arrays
      */
     void add(const wreport::Bulletin& bulletin);
 
-    bool define(int ncid, int bufrdim);
-    void putvar(int ncid) const;
+    bool define(NCOutfile& outfile);
+    void putvar(NCOutfile& outfile) const;
 
     void dump(FILE* out);
 };
@@ -90,8 +92,8 @@ struct Sections
 
     void add(const wreport::BufrBulletin& bulletin);
 
-    bool define(int ncid, int bufrdim);
-    void putvar(int ncid) const;
+    bool define(NCOutfile& outfile);
+    void putvar(NCOutfile& outfile) const;
 };
 
 struct IntArray
@@ -105,8 +107,8 @@ struct IntArray
     void add(int val);
     void add_missing();
 
-    bool define(int ncid, int bufrdim);
-    void putvar(int ncid) const;
+    bool define(NCOutfile& outfile);
+    void putvar(NCOutfile& outfile) const;
 };
 
 }

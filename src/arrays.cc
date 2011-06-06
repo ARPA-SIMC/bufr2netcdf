@@ -22,6 +22,7 @@
 #include "arrays.h"
 #include "utils.h"
 #include "mnemo.h"
+#include "ncoutfile.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
 #include <netcdf.h>
@@ -251,8 +252,11 @@ void Arrays::dump(FILE* out)
     }
 }
 
-bool Arrays::define(int ncid, int bufrdim)
+bool Arrays::define(NCOutfile& outfile)
 {
+    int ncid = outfile.ncid;
+    int bufrdim = outfile.dim_bufr_records;
+
     // Define the array size dimensions
     for (std::map<std::string, LoopInfo>::iterator i = dimnames.begin();
             i != dimnames.end(); ++i)
@@ -320,8 +324,9 @@ bool Arrays::define(int ncid, int bufrdim)
     return true;
 }
 
-void Arrays::putvar(int ncid) const
+void Arrays::putvar(NCOutfile& outfile) const
 {
+    int ncid = outfile.ncid;
     for (vector<ValArray*>::const_iterator i = arrays.begin();
             i != arrays.end(); ++i)
         (*i)->putvar(ncid);
@@ -404,8 +409,10 @@ void Sections::add(const wreport::BufrBulletin& bulletin)
     values.push_back(string((const char*)bulletin.raw_details->sec[idx], len));
 }
 
-bool Sections::define(int ncid, int bufrdim)
+bool Sections::define(NCOutfile& outfile)
 {
+    int ncid = outfile.ncid;
+
     if (max_length == 0)
         return false;
 
@@ -417,15 +424,17 @@ bool Sections::define(int ncid, int bufrdim)
 
     snprintf(name, 20, "section%d", idx);
 
-    int dims[] = { bufrdim, nc_dimid };
+    int dims[] = { outfile.dim_bufr_records, nc_dimid };
     res = nc_def_var(ncid, name, NC_BYTE, 2, dims, &nc_varid);
     error_netcdf::throwf_iferror(res, "creating variable %s", name);
 
     return true;
 }
 
-void Sections::putvar(int ncid) const
+void Sections::putvar(NCOutfile& outfile) const
 {
+    int ncid = outfile.ncid;
+
     if (max_length == 0)
         return;
 
@@ -465,8 +474,11 @@ void IntArray::add_missing()
     values.push_back(NC_FILL_INT);
 }
 
-bool IntArray::define(int ncid, int bufrdim)
+bool IntArray::define(NCOutfile& outfile)
 {
+    int ncid = outfile.ncid;
+    int bufrdim = outfile.dim_bufr_records;
+
     if (values.empty()) return false;
     int res = nc_def_var(ncid, name.c_str(), NC_INT, 1, &bufrdim, &nc_varid);
     error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
@@ -478,12 +490,12 @@ bool IntArray::define(int ncid, int bufrdim)
     return true;
 }
 
-void IntArray::putvar(int ncid) const
+void IntArray::putvar(NCOutfile& outfile) const
 {
     if (values.empty()) return;
     size_t start[] = {0};
     size_t count[] = {values.size()};
-    int res = nc_put_vara_int(ncid, nc_varid, start, count, values.data());
+    int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, values.data());
     error_netcdf::throwf_iferror(res, "storing %zd integer values", values.size());
 }
 
