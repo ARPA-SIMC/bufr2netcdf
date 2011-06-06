@@ -494,8 +494,12 @@ struct MultiStringValArray : public MultiValArray<std::string>
 
         add_common_attributes(ncid);
 
-        res = nc_put_att_text(ncid, nc_varid, "dim1_length", strlen("_constant"), "_constant"); // TODO
-        error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", name.c_str());
+        // Only set to loop_var_name if it changes across BUFRs
+        string dimlenname = "_constant";
+        if (this->loop_var && !this->loop_var->is_constant)
+            dimlenname = this->loop_var->name;
+        res = nc_put_att_text(ncid, this->nc_varid, "dim1_length", dimlenname.size(), dimlenname.data());
+        error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", this->name.c_str());
 
         return true;
     }

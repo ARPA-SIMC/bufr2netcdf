@@ -124,7 +124,7 @@ public:
             attr_arr.add(*a, bufr_idx);
             if (attr_arr.newly_created)
             {
-                arr.loop_var = loop_var;
+                attr_arr.loop_var = loop_var;
                 attr_arr.newly_created = false;
             }
         }
