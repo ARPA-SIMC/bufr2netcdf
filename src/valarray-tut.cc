@@ -94,14 +94,26 @@ void to::test<2>()
     int res;
 
     size_t start[] = {0, 0, 0};
-    size_t count[] = {0, 0, 6};
+    size_t count[] = {1, 1, 6};
     char buf[7];
+
     res = nc_get_vara_text(outfile.ncid, arr->nc_varid, start, count, buf);
     error_netcdf::throwf_iferror(res, "reading variable from %s", testfname);
-
     buf[6] = 0;
     ensure_equals(string(buf), "val0.0");
 
+    start[1] = 1;
+    res = nc_get_vara_text(outfile.ncid, arr->nc_varid, start, count, buf);
+    error_netcdf::throwf_iferror(res, "reading variable from %s", testfname);
+    buf[6] = 0;
+    ensure_equals(string(buf), "val0.1");
+
+    start[0] = 1;
+    start[1] = 0;
+    res = nc_get_vara_text(outfile.ncid, arr->nc_varid, start, count, buf);
+    error_netcdf::throwf_iferror(res, "reading variable from %s", testfname);
+    buf[6] = 0;
+    ensure_equals(string(buf), "val1.0");
 
     outfile.close();
 }

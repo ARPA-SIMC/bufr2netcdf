@@ -506,7 +506,7 @@ struct MultiStringValArray : public MultiValArray<std::string>
 
         size_t arrsize = get_max_rep();
         size_t start[] = {0, 0, 0};
-        size_t count[] = {1, arrsize, info->len};
+        size_t count[] = {1, 1, info->len};
 
         char missing[info->len]; // Missing value
         memset(missing, NC_FILL_CHAR, info->len);
@@ -518,6 +518,7 @@ struct MultiStringValArray : public MultiValArray<std::string>
             start[0] = i;
             for (size_t j = 0; j < arrsize; ++j)
             {
+                start[1] = j;
                 int res;
                 if (j >= v.size() || v[j].empty())
                     res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
