@@ -135,7 +135,8 @@ public:
     {
         // Get/create counter for this tag
         Counter& counter = counters[type].get_counter(tag);
-        unsigned index = counter.get_index(code);
+        Varcode effective_code = type == DT_CHAR ? WR_VAR(2, 8, 0) : code;
+        unsigned index = counter.get_index(effective_code);
 
         // Plain name
         {
@@ -150,7 +151,7 @@ public:
         }
 
         // Mnemonic name
-        const char* mname = table->find(code);
+        const char* mname = table->find(effective_code);
         if (mname)
         {
             mnemo = mname;

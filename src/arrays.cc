@@ -152,8 +152,9 @@ public:
 
     virtual void encode_char_data(Varcode code, unsigned var_pos)
     {
-        //const Var& var = get_var(var_pos);
-        // TODO
+        const Var& var = get_var(var_pos);
+        ValArray& arr = arrays.get_valarray(Namer::DT_CHAR, var, tag);
+        arr.add(var, bufr_idx);
     }
 };
 

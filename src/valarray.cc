@@ -537,8 +537,10 @@ ValArray* ValArray::make_singlevalarray(Namer::DataType type, Varinfo info)
                 return new SingleFloatValArray(info);
         case Namer::DT_QBITS:
             return new SingleIntValArray(info);
+        case Namer::DT_CHAR:
+            return new SingleStringValArray(info);
         default:
-            throw error_unimplemented("only Data and QBits storages are supported so far");
+            throw error_unimplemented("only Data, QBits and Char storages are supported so far");
     }
 }
 
@@ -555,8 +557,10 @@ ValArray* ValArray::make_multivalarray(Namer::DataType type, Varinfo info, const
                 return new MultiFloatValArray(info, loopinfo);
         case Namer::DT_QBITS:
             return new MultiIntValArray(info, loopinfo);
+        case Namer::DT_CHAR:
+            return new MultiStringValArray(info, loopinfo);
         default:
-            throw error_unimplemented("only Data and QBits storages are supported so far");
+            throw error_unimplemented("only Data, QBits and Char storages are supported so far");
     }
 }
 
