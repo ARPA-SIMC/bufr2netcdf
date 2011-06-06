@@ -77,21 +77,17 @@ void read_bufr(FILE* in, BufrSink& out, const char* fname = 0);
 struct Outfile : public BufrSink
 {
 public:
-    std::string fname;
-    int ncid;
-
-    Outfile();
-    virtual ~Outfile();
+    virtual ~Outfile() {}
 
     /**
      * Start writing to the given output file, overwriting it if it already exists
      */
-    void open(const std::string& fname);
+    virtual void open(const std::string& fname) = 0;
 
     /**
      * Write all data to the output file and close it
      */
-    virtual void close();
+    virtual void close() = 0;
 
     /**
      * Add all the contents of the decoded BUFR message
