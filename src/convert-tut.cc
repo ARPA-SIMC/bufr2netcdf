@@ -245,6 +245,7 @@ template<> template<>
 void to::test<11>()
 {
     Convtest t("cdfin_ship");
+    t.ignore_list.add("^DIFFER : NAME : DIMENSION : Loop_003_maxlen : DIMENSION DOESN'T EXIST IN \"tmpfile.nc\"");
     t.convert();
 }
 
