@@ -56,6 +56,9 @@ protected:
     string tag;
     int& bufr_idx;
     ValArray* loop_var;
+    const Vartable* default_vartable;
+    // quality information is stored in netcdf as CODE TABLE 033003 values
+    Var qbits;
 
     void update_tag()
     {
@@ -71,7 +74,15 @@ protected:
 
 public:
     ArrayBuilder(const Bulletin& bulletin, Arrays& arrays, int& bufr_idx)
-        : bulletin::ConstBaseDDSExecutor(bulletin), arrays(arrays), rep_nesting(0), bufr_idx(bufr_idx), loop_var(0) {}
+        : bulletin::ConstBaseDDSExecutor(bulletin),
+          arrays(arrays),
+          rep_nesting(0),
+          bufr_idx(bufr_idx),
+          loop_var(0),
+          default_vartable(Vartable::get("B0000000000000014000")),
+          qbits(default_vartable->query(WR_VAR(0, 33, 3)))
+    {
+    }
 
     virtual void start_subset(unsigned subset_no)
     {
@@ -106,6 +117,28 @@ public:
         loop_var = 0;
     }
 
+    void init_qbits(const Var& var)
+    {
+        qbits.unset();
+        if (const Var* a = var.enqa(WR_VAR(0, 33, 2))) {
+            switch (a->enqi())
+            {
+                case 0: qbits.seti(0); break;
+                case 1: qbits.seti(3); break;
+            }
+        } else if (const Var* a = var.enqa(WR_VAR(0, 33, 3))) {
+            qbits.copy_val_only(*a);
+        } else if (const Var* a = var.enqa(WR_VAR(0, 33, 50))) {
+            switch (a->enqi())
+            {
+                case 1: qbits.seti(0); break;
+                case 2: qbits.seti(1); break;
+                case 3: qbits.seti(2); break;
+                case 4: qbits.seti(3); break;
+            }
+        }
+    }
+
     virtual void encode_var(Varinfo info, unsigned var_pos)
     {
         const Var& var = get_var(var_pos);
@@ -118,10 +151,11 @@ public:
             arr.newly_created = false;
         }
 
-        if (const Var* a = var.enqa(WR_VAR(0, 33, 50)))
+        init_qbits(var);
+        if (qbits.isset())
         {
-            ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, a, &arr);
-            attr_arr.add(*a, bufr_idx);
+            ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, &qbits, &arr);
+            attr_arr.add(qbits, bufr_idx);
             if (attr_arr.newly_created)
             {
                 attr_arr.loop_var = loop_var;

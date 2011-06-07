@@ -107,6 +107,7 @@ struct Convtest
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : PART_PER_THO <> PART PER THOUSAND");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : LOG\\(1/M\\*\\*2\\) <> LOG \\(1/M2\\)");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : 1/S <> Hz");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : DB <> dB");
     }
 
     void convert()
@@ -238,6 +239,15 @@ template<> template<>
 void to::test<10>()
 {
     Convtest t("cdfin_rass");
+    // The file was encoded assuming than with B31021=1 and a qbit value of 1
+    // the quality information is missing, but CODE TABLE 031021 says that 1
+    // means "suspect or bad"
+    t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
+    t.ignore_list.add("^DIFFER : VARIABLE : MTVIRQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
+    // TODO: Looks like a quirk in nccmp
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> -2147483647");
+    // TODO: Another case of bufrx2netcdf skipping some references
+    t.ignore_list.add("^DIFFER : VARIABLE \"MMIOGS\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_rass\"");
     t.convert();
 }
 
