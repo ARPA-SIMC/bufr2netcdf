@@ -262,6 +262,12 @@ void to::test<11>()
 {
     Convtest t("cdfin_ship");
     t.ignore_list.add("^DIFFER : NAME : DIMENSION : Loop_003_maxlen : DIMENSION DOESN'T EXIST IN \"tmpfile.nc\"");
+    // TODO: In the sample data, multiple references to MGGTP look swapped
+    t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference_004024 : VALUES : MGGTP2 <> MGGTP1");
+    t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference2_004024 : VALUES : MGGTP1 <> MGGTP2");
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : reference_004024 : VALUES : MGGTP4 <> MGGTP3");
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : reference2_004024 : VALUES : MGGTP3 <> MGGTP4");
+
     t.convert();
 }
 

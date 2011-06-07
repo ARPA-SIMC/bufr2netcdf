@@ -52,7 +52,7 @@ protected:
     Arrays& arrays;
     unsigned rep_nesting;
     std::vector<unsigned> rep_stack;
-    map<Varcode, string> context;
+    map<Varcode, const ValArray*> context;
     string tag;
     int& bufr_idx;
     ValArray* loop_var;
@@ -183,7 +183,7 @@ public:
 
         // Add references information to arr
         if (arr.references.empty())
-            for (map<Varcode, string>::const_iterator i = context.begin();
+            for (map<Varcode, const ValArray*>::const_iterator i = context.begin();
                     i != context.end(); ++i)
                 arr.references.push_back(*i);
 
@@ -208,7 +208,7 @@ public:
                 prev_code = var.code();
                 prev_code_count = 1;
             }
-            context[ctx_code] = arr.name;
+            context[ctx_code] = &arr;
         } else {
             prev_code = 0;
             prev_code_count = 0;

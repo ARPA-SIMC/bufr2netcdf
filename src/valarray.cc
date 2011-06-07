@@ -86,6 +86,9 @@ struct BaseValArray : public ValArray
         res = nc_put_att_text(ncid, nc_varid, "units", strlen(info->unit), info->unit);
         error_netcdf::throwf_iferror(res, "setting unit attribute for %s", name.c_str());
 
+        res = nc_put_att_text(ncid, nc_varid, "mnemonic", mnemo.size(), mnemo.data());
+        error_netcdf::throwf_iferror(res, "setting mnemonic attribute for %s", name.c_str());
+
         const char* tname = Namer::type_name(type);
         res = nc_put_att_text(ncid, nc_varid, "type", strlen(tname), tname);
         error_netcdf::throwf_iferror(res, "setting type attribute for %s", name.c_str());
@@ -107,21 +110,42 @@ struct BaseValArray : public ValArray
         res = nc_put_att_text(ncid, nc_varid, "dim0_length", strlen("_constant"), "_constant"); // TODO
         error_netcdf::throwf_iferror(res, "setting dim0_length attribute for %s", name.c_str());
 
-        res = nc_put_att_text(ncid, nc_varid, "mnemonic", mnemo.size(), mnemo.data());
-        error_netcdf::throwf_iferror(res, "setting mnemonic attribute for %s", name.c_str());
+        if (!slaves.empty())
+        {
+            // FIXME: this way of setting string array attributes in NetCDF
+            // does not work: if we have to generate NetCDF variables with
+            // multiple associated fields, we'll see how to do it
+
+            //const char* fnames[slaves.size()];
+            //for (size_t i = 0; i < slaves.size(); ++i)
+            //    fnames[i] = slaves[i]->name.c_str();
+            //res = nc_put_att_string(ncid, nc_varid, "associated_field", slaves.size(), fnames);
+            res = nc_put_att_text(ncid, nc_varid, "associated_field", slaves[0]->name.size(), slaves[0]->name.data());
+            error_netcdf::throwf_iferror(res, "setting associated_field attribute for %s", this->name.c_str());
+        }
 
         // Refrences attributes
         if (!references.empty())
         {
             int ref_codes[references.size()];
+            unsigned rsize = 0;
             for (size_t i = 0; i < references.size(); ++i)
             {
                 Varcode code = references[i].first;
-                const std::string& name = references[i].second;
+                const ValArray* arr = references[i].second;
 
-                ref_codes[i] = 0 * 100000
-                             + WR_VAR_X(code) * 1000
-                             + WR_VAR_Y(code);
+                // Do not reference fully undefined arrays
+                if (!arr->has_values())
+                    continue;
+
+                // Do not reference the same varcode as ourself
+                if (arr->info->var == info->var)
+                    continue;
+
+                if (WR_VAR_F(code) == 0)
+                    ref_codes[rsize++] = WR_VAR_F(code) * 100000
+                                       + WR_VAR_X(code) * 1000
+                                       + WR_VAR_Y(code);
 
                 char att_name[20];
                 if (WR_VAR_F(code) > 0)
@@ -136,26 +160,15 @@ struct BaseValArray : public ValArray
                             WR_VAR_X(code),
                             WR_VAR_Y(code));
 
-                res = nc_put_att_text(ncid, nc_varid, att_name, name.size(), name.data());
+                res = nc_put_att_text(ncid, nc_varid, att_name, arr->name.size(), arr->name.data());
                 error_netcdf::throwf_iferror(res, "setting %s attribute for %s", att_name, this->name.c_str());
             }
 
-            res = nc_put_att_int(ncid, nc_varid, "references", NC_INT, references.size(), ref_codes);
-            error_netcdf::throwf_iferror(res, "setting references attribute for %s", name.c_str());
-        }
-
-        if (!slaves.empty())
-        {
-            // FIXME: this way of setting string array attributes in NetCDF
-            // does not work: if we have to generate NetCDF variables with
-            // multiple associated fields, we'll see how to do it
-
-            //const char* fnames[slaves.size()];
-            //for (size_t i = 0; i < slaves.size(); ++i)
-            //    fnames[i] = slaves[i]->name.c_str();
-            //res = nc_put_att_string(ncid, nc_varid, "associated_field", slaves.size(), fnames);
-            res = nc_put_att_text(ncid, nc_varid, "associated_field", slaves[0]->name.size(), slaves[0]->name.data());
-            error_netcdf::throwf_iferror(res, "setting associated_field attribute for %s", this->name.c_str());
+            if (rsize > 0)
+            {
+                res = nc_put_att_int(ncid, nc_varid, "references", NC_INT, rsize, ref_codes);
+                error_netcdf::throwf_iferror(res, "setting references attribute for %s", name.c_str());
+            }
         }
     }
 };
@@ -170,6 +183,13 @@ struct SingleValArray : public BaseValArray
 
     size_t get_size() const { return vars.size(); }
     size_t get_max_rep() const { return 1; }
+
+    bool has_values() const
+    {
+        if (!is_constant) return true;
+        if (vars.empty()) return false;
+        return vars[0] != nc_fill<TYPE>();
+    }
 
     void add(const Var& var, unsigned bufr_idx=0)
     {
@@ -319,6 +339,18 @@ struct MultiValArray : public BaseValArray
 
     MultiValArray(Varinfo info, const LoopInfo& loopinfo)
         : BaseValArray(info), loopinfo(loopinfo), last_val(nc_fill<TYPE>()) {}
+
+    bool has_values() const
+    {
+        if (!is_constant) return true;
+        // Look for one value
+        for (typename std::vector< std::vector<TYPE> >::const_iterator i = arrs.begin();
+                i != arrs.end(); ++i)
+            for (typename std::vector<TYPE>::const_iterator j = i->begin();
+                    j != i->end(); ++j)
+                return *j != nc_fill<TYPE>();
+        return false;
+    }
 
     void add(const wreport::Var& var, unsigned bufr_idx)
     {

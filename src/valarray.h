@@ -55,7 +55,7 @@ struct ValArray
     wreport::Varinfo info;
     unsigned rcnt;
     int nc_varid;
-    std::vector< std::pair<wreport::Varcode, std::string> > references;
+    std::vector< std::pair<wreport::Varcode, const ValArray*> > references;
     Namer::DataType type;
     ValArray* master;
     std::vector<ValArray*> slaves;
@@ -78,6 +78,10 @@ struct ValArray
 
     /// Returns the maximum number of repetition instances found
     virtual size_t get_max_rep() const = 0;
+
+    /// Returns true if the array contains some defined values, false if it's
+    /// all undefined values
+    virtual bool has_values() const = 0;
 
     virtual bool define(int ncid, int bufrdim) = 0;
     virtual void putvar(int ncid) const = 0;
