@@ -57,8 +57,21 @@ protected:
     int& bufr_idx;
     ValArray* loop_var;
     const Vartable* default_vartable;
+
     // quality information is stored in netcdf as CODE TABLE 033003 values
     Var qbits;
+
+    /*
+     * The next two variables are used to deal with [begin,end] hour ranges
+     * being represented by two consecutive B04024. They implement a
+     * generalisation of the hack.
+     */
+
+    // Previously seen varcode (0 at start of subset or if the previous varcode
+    // had xx >= 10)
+    Varcode prev_code;
+    // Number of times in a row the previous varcode appeared
+    unsigned prev_code_count;
 
     void update_tag()
     {
@@ -80,7 +93,8 @@ public:
           bufr_idx(bufr_idx),
           loop_var(0),
           default_vartable(Vartable::get("B0000000000000014000")),
-          qbits(default_vartable->query(WR_VAR(0, 33, 3)))
+          qbits(default_vartable->query(WR_VAR(0, 33, 3))),
+          prev_code(0), prev_code_count(0)
     {
     }
 
@@ -94,6 +108,8 @@ public:
         arrays.start(tag);
         ++bufr_idx;
         loop_var = 0;
+        prev_code = 0;
+        prev_code_count = 0;
     }
 
     virtual void push_repetition(unsigned length, unsigned count)
@@ -173,7 +189,30 @@ public:
 
         // Update current context information
         if (WR_VAR_X(var.code()) < 10)
-            context[var.code()] = arr.name;
+        {
+            Varcode ctx_code = var.code();
+            if (prev_code == var.code())
+            {
+                // Encode the repetition count in F
+                // 2 consecutive context variables)
+                ctx_code |= WR_VAR(prev_code_count, 0, 0);
+
+                // Prevent roll over after 3 times: in those cases we just
+                // overwrite the 4th, but the maximum we should see is really 2
+                // in a row
+                if (prev_code_count < 3)
+                    ++prev_code_count;
+            }
+            else
+            {
+                prev_code = var.code();
+                prev_code_count = 1;
+            }
+            context[ctx_code] = arr.name;
+        } else {
+            prev_code = 0;
+            prev_code_count = 0;
+        }
 
         if (WR_VAR_X(var.code()) == 31)
         {

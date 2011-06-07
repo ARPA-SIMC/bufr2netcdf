@@ -119,15 +119,22 @@ struct BaseValArray : public ValArray
                 Varcode code = references[i].first;
                 const std::string& name = references[i].second;
 
-                ref_codes[i] = WR_VAR_F(code) * 100000
+                ref_codes[i] = 0 * 100000
                              + WR_VAR_X(code) * 1000
                              + WR_VAR_Y(code);
 
                 char att_name[20];
-                snprintf(att_name, 20, "reference_%01d%02d%03d",
-                        WR_VAR_F(code),
-                        WR_VAR_X(code),
-                        WR_VAR_Y(code));
+                if (WR_VAR_F(code) > 0)
+                    snprintf(att_name, 20, "reference%d_%01d%02d%03d",
+                            WR_VAR_F(code) + 1,
+                            0,
+                            WR_VAR_X(code),
+                            WR_VAR_Y(code));
+                else
+                    snprintf(att_name, 20, "reference_%01d%02d%03d",
+                            WR_VAR_F(code),
+                            WR_VAR_X(code),
+                            WR_VAR_Y(code));
 
                 res = nc_put_att_text(ncid, nc_varid, att_name, name.size(), name.data());
                 error_netcdf::throwf_iferror(res, "setting %s attribute for %s", att_name, this->name.c_str());
