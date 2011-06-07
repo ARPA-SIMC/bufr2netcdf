@@ -104,6 +104,7 @@ public:
         if (rep_nesting != 0)
             error_consistency::throwf("At start of subset, rep_nesting is %u instead of 0", rep_nesting);
         rep_stack.clear();
+        context.clear();
         update_tag();
         arrays.start(tag);
         ++bufr_idx;
