@@ -117,11 +117,12 @@ public:
         loop_var = 0;
     }
 
-    void init_qbits(const Var& var)
+    // Returns true if it found qbit info (even if undef), else false
+    bool init_qbits(const Var& var)
     {
         qbits.unset();
         if (const Var* a = var.enqa(WR_VAR(0, 33, 2))) {
-            switch (a->enqi())
+            switch (a->enq(3))
             {
                 case 0: qbits.seti(0); break;
                 case 1: qbits.seti(3); break;
@@ -129,14 +130,16 @@ public:
         } else if (const Var* a = var.enqa(WR_VAR(0, 33, 3))) {
             qbits.copy_val_only(*a);
         } else if (const Var* a = var.enqa(WR_VAR(0, 33, 50))) {
-            switch (a->enqi())
+            switch (a->enq(15))
             {
                 case 1: qbits.seti(0); break;
                 case 2: qbits.seti(1); break;
                 case 3: qbits.seti(2); break;
                 case 4: qbits.seti(3); break;
             }
-        }
+        } else
+            return false;
+        return true;
     }
 
     virtual void encode_var(Varinfo info, unsigned var_pos)
@@ -151,8 +154,7 @@ public:
             arr.newly_created = false;
         }
 
-        init_qbits(var);
-        if (qbits.isset())
+        if (init_qbits(var))
         {
             ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, &qbits, &arr);
             attr_arr.add(qbits, bufr_idx);
