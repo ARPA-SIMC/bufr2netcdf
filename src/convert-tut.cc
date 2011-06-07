@@ -289,6 +289,16 @@ template<> template<>
 void to::test<15>()
 {
     Convtest t("cdfin_wprof");
+    // TODO: Looks like quirks in nccmp
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> -2147483647");
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : 0 <> 0\n$");
+
+    // The file was encoded assuming than with B31021=1 and a qbit value of 1
+    // the quality information is missing, but CODE TABLE 031021 says that 1
+    // means "suspect or bad"
+    t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
+    t.ignore_list.add("^DIFFER : VARIABLE : NDNDNQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
+
     t.convert();
 }
 
