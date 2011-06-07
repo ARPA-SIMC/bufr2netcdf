@@ -299,6 +299,9 @@ void to::test<15>()
     t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
     t.ignore_list.add("^DIFFER : VARIABLE : NDNDNQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
 
+    // TODO: Another case of bufrx2netcdf skipping some references
+    t.ignore_list.add("^DIFFER : VARIABLE \"MMIOGS\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_wprof\"");
+
     t.convert();
 }
 
