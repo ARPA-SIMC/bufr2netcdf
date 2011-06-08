@@ -18,7 +18,7 @@
  */
 
 #include "ncoutfile.h"
-#include "convert.h"
+#include "options.h"
 #include "utils.h"
 #include <tests/tests.h>
 #include <wreport/error.h>

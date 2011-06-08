@@ -20,6 +20,7 @@
  */
 
 #include "convert.h"
+#include "options.h"
 #include "ncoutfile.h"
 #include "arrays.h"
 #include "utils.h"

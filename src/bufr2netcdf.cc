@@ -1,4 +1,5 @@
 #include "convert.h"
+#include "options.h"
 #include <wreport/error.h>
 #include <string>
 #include <cstdio>

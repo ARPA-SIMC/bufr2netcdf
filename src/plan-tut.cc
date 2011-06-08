@@ -18,7 +18,7 @@
  */
 
 #include "plan.h"
-#include "convert.h"
+#include "options.h"
 #include "valarray.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
@@ -101,8 +101,7 @@ void to::test<1>()
     ensure(s->entries[0]->data);
     ensure_equals(s->entries[0]->data->name, "MMTI");
 
-    plan.print(stderr);
-
+    //plan.print(stderr);
 }
 
 }

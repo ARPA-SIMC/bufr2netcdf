@@ -35,20 +35,7 @@ struct BufrBulletin;
 }
 
 namespace b2nc {
-
-/**
- * Configuration for the conversion process
- */
-struct Options
-{
-    bool use_mnemonic;
-    std::string out_fname;
-
-    Options()
-        : use_mnemonic(true)
-    {
-    }
-};
+struct Options;
 
 /// Generic interface for BUFR consumers
 struct BufrSink

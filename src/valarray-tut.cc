@@ -18,7 +18,7 @@
  */
 
 #include "valarray.h"
-#include "convert.h"
+#include "options.h"
 #include "utils.h"
 #include "ncoutfile.h"
 #include <tests/tests.h>
