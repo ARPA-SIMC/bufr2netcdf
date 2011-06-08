@@ -167,7 +167,7 @@ struct PlanMaker : opcode::Explorer
     PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
         : plan(plan),
           btable(b.btable),
-          namer(Namer::get(opts.use_mnemonic ? Namer::MNEMONIC : Namer::PLAIN).release())
+          namer(Namer::get(opts).release())
     {
         current_plan.push(Section(*this, plan.create_section()));
     }

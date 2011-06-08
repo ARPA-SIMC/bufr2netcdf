@@ -153,7 +153,7 @@ struct NCFiller
     IntArray s1time;
 
     NCFiller(const Options& opts)
-        : arrays(opts.use_mnemonic ? Namer::MNEMONIC : Namer::PLAIN),
+        : arrays(opts),
           sec1(1), sec2(2),
           edition("edition_number"),
           s1mtn("section1_master_table_nr"),

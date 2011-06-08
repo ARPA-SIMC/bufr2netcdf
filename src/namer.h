@@ -28,6 +28,8 @@
 
 namespace b2nc {
 
+struct Options;
+
 struct Namer
 {
     enum Type {
@@ -69,7 +71,7 @@ struct Namer
     /**
      * Get a namer by type.
      */
-    static std::auto_ptr<Namer> get(Type type);
+    static std::auto_ptr<Namer> get(const Options& opts);
 
     /**
      * Get the string name for a type

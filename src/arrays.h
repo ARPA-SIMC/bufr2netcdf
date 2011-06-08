@@ -39,6 +39,7 @@ struct Subset;
 
 namespace b2nc {
 
+struct Options;
 struct NCOutfile;
 
 struct Arrays
@@ -63,7 +64,7 @@ struct Arrays
     unsigned loop_idx;
     int bufr_idx;
 
-    Arrays(Namer::Type type = Namer::PLAIN);
+    Arrays(const Options& opts);
     ~Arrays();
 
     void start(const std::string& tag);

@@ -18,6 +18,7 @@
  */
 
 #include "namer.h"
+#include "options.h"
 #include <tests/tests.h>
 #include <wibble/string.h>
 
@@ -44,7 +45,9 @@ TESTGRP(namer);
 template<> template<>
 void to::test<1>()
 {
-    auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+    Options opts;
+    opts.use_mnemonic = false;
+    auto_ptr<Namer> n(Namer::get(opts));
     string name, mnemo;
 
     for (int i = 0; i < 3; ++i)
@@ -74,7 +77,9 @@ void to::test<1>()
 template<> template<>
 void to::test<2>()
 {
-    auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+    Options opts;
+    opts.use_mnemonic = false;
+    auto_ptr<Namer> n(Namer::get(opts));
     string name, mnemo;
 
     for (int i = 0; i < 3; ++i)
@@ -113,7 +118,9 @@ void to::test<2>()
 template<> template<>
 void to::test<3>()
 {
-    auto_ptr<Namer> n(Namer::get(Namer::PLAIN));
+    Options opts;
+    opts.use_mnemonic = false;
+    auto_ptr<Namer> n(Namer::get(opts));
     string name, mnemo;
 
     for (int i = 0; i < 3; ++i)

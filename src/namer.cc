@@ -21,6 +21,7 @@
 
 #include "namer.h"
 #include "mnemo.h"
+#include "options.h"
 #include <wreport/error.h>
 #include <map>
 #include <vector>
@@ -193,15 +194,12 @@ const char* Namer::type_name(DataType type)
     return type_names[type];
 }
 
-auto_ptr<Namer> Namer::get(Type type)
+auto_ptr<Namer> Namer::get(const Options& opts)
 {
-    switch (type)
-    {
-        case PLAIN: return auto_ptr<Namer>(new PlainNamer);
-        case MNEMONIC: return auto_ptr<Namer>(new MnemoNamer);
-        default:
-            error_consistency::throwf("requested namer for unsupported type %d", (int)type);
-    }
+    if (opts.use_mnemonic)
+        return auto_ptr<Namer>(new MnemoNamer);
+    else
+        return auto_ptr<Namer>(new PlainNamer);
 }
 
 }

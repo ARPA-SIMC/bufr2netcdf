@@ -243,8 +243,8 @@ public:
 
 
 
-Arrays::Arrays(Namer::Type type)
-    : namer(Namer::get(type).release()),
+Arrays::Arrays(const Options& opts)
+    : namer(Namer::get(opts).release()),
       date_year(0), date_month(0), date_day(0),
       time_hour(0), time_minute(0), time_second(0),
       date_varid(-1), time_varid(-1),

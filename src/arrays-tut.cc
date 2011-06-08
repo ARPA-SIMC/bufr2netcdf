@@ -18,6 +18,7 @@
  */
 
 #include "arrays.h"
+#include "options.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
 #include <wreport/bulletin.h>
@@ -66,7 +67,8 @@ static void read_bufr(Arrays& a, const std::string& testname)
 template<> template<>
 void to::test<1>()
 {
-    Arrays arrays;
+    Options opts; opts.use_mnemonic = false;
+    Arrays arrays(opts);
     read_bufr(arrays, "cdfin_acars");
 
     ensure_equals(arrays.arrays.size(), 40u);
@@ -92,7 +94,8 @@ void to::test<1>()
 template<> template<>
 void to::test<2>()
 {
-    Arrays arrays;
+    Options opts; opts.use_mnemonic = false;
+    Arrays arrays(opts);
     read_bufr(arrays, "cdfin_gps_zenith");
 
     ensure_equals(arrays.arrays.size(), 31u);
@@ -128,7 +131,8 @@ void to::test<2>()
 template<> template<>
 void to::test<3>()
 {
-    Arrays arrays;
+    Options opts; opts.use_mnemonic = false;
+    Arrays arrays(opts);
     read_bufr(arrays, "cdfin_buoy");
 
     //arrays.dump(stderr);
