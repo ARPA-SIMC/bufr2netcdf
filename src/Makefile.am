@@ -12,10 +12,10 @@ INCLUDES = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NC_CFLAGS)
 # Convenience library with conversion code
 #
 
-noinst_HEADERS = arrays.h convert.h mnemo.h namer.h ncoutfile.h utils.h valarray.h
+noinst_HEADERS = arrays.h convert.h mnemo.h namer.h ncoutfile.h plan.h utils.h valarray.h
 
 noinst_LTLIBRARIES = libb2nc.la
-libb2nc_la_SOURCES = utils.cc mnemo.cc namer.cc valarray.cc arrays.cc ncoutfile.cc convert.cc
+libb2nc_la_SOURCES = utils.cc mnemo.cc namer.cc valarray.cc plan.cc arrays.cc ncoutfile.cc convert.cc
 
 #
 # Conversion tool
@@ -48,6 +48,7 @@ tut_test_SOURCES = \
 	namer-tut.cc \
 	ncoutfile-tut.cc \
 	valarray-tut.cc \
+	plan-tut.cc \
 	arrays-tut.cc \
 	convert-tut.cc \
 	tests/tests.cc \

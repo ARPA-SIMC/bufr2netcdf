@@ -26,6 +26,7 @@
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
 #include <netcdf.h>
+#include <stack>
 #include <cstring>
 
 using namespace wreport;
