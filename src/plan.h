@@ -35,6 +35,7 @@ struct Bulletin;
 }
 
 namespace b2nc {
+struct Options;
 struct ValArray;
 
 namespace plan {
@@ -111,7 +112,7 @@ struct Plan
     /// Create a new section
     plan::Section& create_section();
 
-    void build(const wreport::Bulletin& bulletin);
+    void build(const wreport::Bulletin& bulletin, const Options& opts);
 
     void print(FILE* out);
 

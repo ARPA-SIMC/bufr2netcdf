@@ -21,6 +21,7 @@
 
 #include "plan.h"
 #include "valarray.h"
+#include "convert.h"
 //#include "utils.h"
 //#include "mnemo.h"
 #include <wreport/var.h>
@@ -86,29 +87,61 @@ struct PlanMaker : opcode::Explorer
 {
     struct Section
     {
+        PlanMaker& maker;
+
         // Section we are editing
         plan::Section& section;
 
         // True if
         bool has_qbits;
 
-        Section(plan::Section& section)
-            : section(section), has_qbits(false)
+        Section(PlanMaker& maker, plan::Section& section)
+            : maker(maker), section(section), has_qbits(false)
         {
         }
 
-        void add_data(Varinfo info)
+        auto_ptr<ValArray> make_array(Namer::DataType type, Varinfo info)
         {
+            string name;
+            string mnemo;
+            char TODO_temporary_tag[20];
+            snprintf(TODO_temporary_tag, 20, "%zd", section.id);
+            unsigned rcnt = maker.namer->name(type, info->var, TODO_temporary_tag, name, mnemo);
+            auto_ptr<ValArray> arr(ValArray::make_singlevalarray(type, info));
+            arr->name = name;
+            arr->mnemo = mnemo;
+            arr->rcnt = rcnt;
+            arr->type = type;
+
             // TODO if (toplevel)
                 // TODO return ValArray::make_singlevalarray(type, info);
             // TODO else
                 // TODO arr.reset(ValArray::make_multivalarray(type, info, i->second));
+
+
+            return arr;
+        }
+
+        auto_ptr<ValArray> make_data_array(Varinfo info)
+        {
+            return make_array(Namer::DT_DATA, info);
+        }
+
+        auto_ptr<ValArray> make_qbits_array(Varinfo info, ValArray& master)
+        {
+            auto_ptr<ValArray> arr = make_array(Namer::DT_QBITS, info);
+            arr->master = &master;
+            master.slaves.push_back(arr.get());
+            return arr;
+        }
+
+        void add_data(Varinfo info)
+        {
             section.entries.push_back(new plan::Variable);
             plan::Variable& pi = *section.entries.back();
-            pi.data = ValArray::make_singlevalarray(Namer::DT_DATA, info);
+            pi.data = make_data_array(info).release();
             if (has_qbits)
-                pi.qbits = ValArray::make_singlevalarray(Namer::DT_QBITS, info);
-            // TODO fill in things like names
+                pi.qbits = make_qbits_array(info, *pi.data).release();
         }
 
         void add_subplan(plan::Section& subplan)
@@ -128,14 +161,20 @@ struct PlanMaker : opcode::Explorer
     // B table used for varcode resolution
     const Vartable* btable;
 
-    PlanMaker(Plan& plan, const Bulletin& b)
-        : plan(plan), btable(b.btable)
+    // Namer used to give names to variables
+    Namer* namer;
+
+    PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
+        : plan(plan),
+          btable(b.btable),
+          namer(Namer::get(opts.use_mnemonic ? Namer::MNEMONIC : Namer::PLAIN).release())
     {
-        current_plan.push(Section(plan.create_section()));
+        current_plan.push(Section(*this, plan.create_section()));
     }
 
     ~PlanMaker()
     {
+        delete namer;
     }
 
     void b_variable(Varcode code)
@@ -159,11 +198,13 @@ struct PlanMaker : opcode::Explorer
         }
     }
 
-    void r_replication_begin(Varcode code)
+    void r_replication_begin(Varcode code, Varcode delayed_code)
     {
+        if (delayed_code) b_variable(delayed_code);
+
         Section& s = current_plan.top();
         plan::Section& ns = plan.create_section();
-        current_plan.push(Section(ns));
+        current_plan.push(Section(*this, ns));
         s.add_subplan(ns);
     }
 
@@ -171,6 +212,11 @@ struct PlanMaker : opcode::Explorer
     {
         current_plan.pop();
     }
+
+private:
+    // Forbid copy
+    PlanMaker(const PlanMaker&);
+    PlanMaker& operator=(const PlanMaker&);
 };
 
 }
@@ -185,9 +231,9 @@ Plan::~Plan()
         delete *i;
 }
 
-void Plan::build(const wreport::Bulletin& bulletin)
+void Plan::build(const wreport::Bulletin& bulletin, const Options& opts)
 {
-    PlanMaker pm(*this, bulletin);
+    PlanMaker pm(*this, bulletin, opts);
     bulletin.explore_datadesc(pm);
 }
 

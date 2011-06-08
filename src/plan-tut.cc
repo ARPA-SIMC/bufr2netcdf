@@ -18,6 +18,8 @@
  */
 
 #include "plan.h"
+#include "convert.h"
+#include "valarray.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
 #include <wreport/bulletin.h>
@@ -63,11 +65,41 @@ static void read_nth_bufr(BufrBulletin& bulletin, const std::string& testname, u
 template<> template<>
 void to::test<1>()
 {
+    Options opts;
+
     BufrBulletin bulletin;
     read_nth_bufr(bulletin, "cdfin_acars");
 
     Plan plan;
-    plan.build(bulletin);
+    plan.build(bulletin, opts);
+
+    // Check toplevel section
+    const plan::Section* s = plan.sections[0];
+
+    // Normal variable
+    ensure(s->entries[0]->data);
+    ensure_equals(s->entries[0]->data->name, "MMIOGC");
+
+    // Delayed replication count goes in containing section
+    ensure(s->entries[25]->data);
+    ensure_equals(s->entries[25]->data->name, "MDREP");
+
+    // Replicated sections are represented by a placeholder
+    ensure(!s->entries[26]->data);
+    ensure(s->entries[26]->subsection);
+    ensure_equals(s->entries[26]->subsection->id, 1);
+
+    // The containing section continues fine after the replicated section
+    ensure(s->entries[27]->data);
+    ensure_equals(s->entries[27]->data->name, "MTUIN");
+
+    // Check replicated section
+    s = plan.sections[1];
+
+    // Normal variables are there, even if the section might be repeated 0
+    // times
+    ensure(s->entries[0]->data);
+    ensure_equals(s->entries[0]->data->name, "MMTI");
 
     plan.print(stderr);
 
