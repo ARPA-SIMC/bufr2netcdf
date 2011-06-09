@@ -59,6 +59,8 @@ ValArray::ValArray(wreport::Varinfo info)
 {
 }
 
+namespace {
+
 struct BaseValArray : public ValArray
 {
     BaseValArray(Varinfo info) : ValArray(info) {}
@@ -592,6 +594,7 @@ struct MultiStringValArray : public MultiValArray<std::string>
     }
 };
 
+}
 
 ValArray* ValArray::make_singlevalarray(Namer::DataType type, Varinfo info)
 {
