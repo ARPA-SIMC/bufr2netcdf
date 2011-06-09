@@ -58,10 +58,6 @@ protected:
     std::vector<unsigned> rep_stack;
     map<Varcode, const ValArray*> context;
     int& bufr_idx;
-    const Vartable* default_vartable;
-
-    // quality information is stored in netcdf as CODE TABLE 033003 values
-    Var qbits;
 
     /*
      * The next two variables are used to deal with [begin,end] hour ranges
@@ -81,8 +77,6 @@ public:
           arrays(arrays),
           rep_nesting(0),
           bufr_idx(bufr_idx),
-          default_vartable(Vartable::get("B0000000000000014000")),
-          qbits(default_vartable->query(WR_VAR(0, 33, 3))),
           prev_code(0), prev_code_count(0)
     {
     }
@@ -132,29 +126,17 @@ public:
         cur_section.top()->cursor++;
     }
 
-    // Returns true if it found qbit info (even if undef), else false
-    bool init_qbits(const Var& var)
+    // Returns the qbit attribute for this variable, or NULL if none is found
+    const Var* get_qbits(const Var& var)
     {
-        qbits.unset();
         if (const Var* a = var.enqa(WR_VAR(0, 33, 2))) {
-            switch (a->enq(3))
-            {
-                case 0: qbits.seti(0); break;
-                case 1: qbits.seti(3); break;
-            }
+            return a;
         } else if (const Var* a = var.enqa(WR_VAR(0, 33, 3))) {
-            qbits.copy_val_only(*a);
+            return a;
         } else if (const Var* a = var.enqa(WR_VAR(0, 33, 50))) {
-            switch (a->enq(15))
-            {
-                case 1: qbits.seti(0); break;
-                case 2: qbits.seti(1); break;
-                case 3: qbits.seti(2); break;
-                case 4: qbits.seti(3); break;
-            }
-        } else
-            return false;
-        return true;
+            return a;
+        }
+        return NULL;
     }
 
     virtual void encode_var(Varinfo info, unsigned var_pos)
@@ -180,8 +162,9 @@ public:
                 case WR_VAR(0, 4, 6): if (!arrays.time_second) arrays.time_second = v.data; break;
             }
         }
-        if (v.qbits && init_qbits(var))
-            v.qbits->add(qbits, bufr_idx);
+        if (v.qbits)
+            if (const Var* q = get_qbits(var))
+                v.qbits->add(*q, bufr_idx);
         cur_section.top()->cursor++;
     }
 

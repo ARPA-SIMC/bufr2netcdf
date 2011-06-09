@@ -235,8 +235,9 @@ void to::test<10>()
     // The file was encoded assuming than with B31021=1 and a qbit value of 1
     // the quality information is missing, but CODE TABLE 031021 says that 1
     // means "suspect or bad"
-    t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
-    t.ignore_list.add("^DIFFER : VARIABLE : MTVIRQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
+    t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
+    t.ignore_list.add("^DIFFER : VARIABLE : MTVIRQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
+
     // TODO: Looks like a quirk in nccmp
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> -2147483647");
     // TODO: Another case of bufrx2netcdf skipping some references
@@ -297,8 +298,8 @@ void to::test<15>()
     // The file was encoded assuming than with B31021=1 and a qbit value of 1
     // the quality information is missing, but CODE TABLE 031021 says that 1
     // means "suspect or bad"
-    t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
-    t.ignore_list.add("^DIFFER : VARIABLE : NDNDNQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
+    t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
+    t.ignore_list.add("^DIFFER : VARIABLE : NDNDNQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
 
     t.convert();
 }

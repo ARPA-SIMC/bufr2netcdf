@@ -295,15 +295,16 @@ struct PlanMaker : opcode::Explorer
     unsigned loop_index;
 
     // Varinfo describing qbits variables
-    Varinfo qbits_info;
+    MutableVarinfo qbits_info;
 
     PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
         : plan(plan),
           btable(b.btable),
           namer(Namer::get(opts).release()),
           loop_index(0),
-          qbits_info(b.btable->query(WR_VAR(0, 33, 3)))
+          qbits_info(MutableVarinfo::create_singleuse())
     {
+        qbits_info->set(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 0, 0, 10, 0, 32);
         current_plan.push(Section(*this, plan.create_section()));
     }
 
