@@ -23,7 +23,7 @@
 #define B2NC_PLAN_H
 
 //#include "namer.h"
-//#include "valarray.h"
+#include "valarray.h"
 //#include <wreport/varinfo.h>
 //#include <string>
 #include <vector>
@@ -37,6 +37,7 @@ struct Bulletin;
 namespace b2nc {
 struct Options;
 struct ValArray;
+struct NCOutfile;
 
 namespace plan {
 
@@ -95,16 +96,10 @@ struct Section
     std::vector<Variable*> entries;
 
     /**
-     * Pointer to variable holding the delayed replication count for this
-     * section's loop, if any
+     * If we are a replicated section using delayed replication, store here
+     * information about the loop and delayed replication count.
      */
-    Variable* loop_var;
-
-    /**
-     * Index of the delayed replication count used to name Loop_NNN_maxlen
-     * attributes
-     */
-    unsigned loop_var_index;
+    LoopInfo loop;
 
     /**
      * Cursor used when iterating the structure mapping decoded data to the
@@ -118,7 +113,10 @@ struct Section
     // Get the variable pointed by the cursor
     Variable& current() const;
 
-    void print(FILE* out);
+    void define(NCOutfile& outfile);
+    void putvar(NCOutfile& outfile) const;
+    void print(FILE* out) const;
+
 private:
     // Forbid copy
     Section(const Section&);
@@ -139,8 +137,10 @@ struct Plan
     plan::Section& create_section();
 
     void build(const wreport::Bulletin& bulletin);
+    void define(NCOutfile& outfile);
+    void putvar(NCOutfile& outfile) const;
 
-    void print(FILE* out);
+    void print(FILE* out) const;
 
 private:
     // Forbid copy

@@ -51,11 +51,6 @@ struct Namer
     virtual ~Namer() {}
 
     /**
-     * Mark the beginning of the section with the given tag
-     */
-    virtual void start(const std::string& tag) = 0;
-
-    /**
      * Get a name for a variable
      *
      * @params code
@@ -66,7 +61,7 @@ struct Namer
      * @returns the number of time the given code has been seen in the message,
      *   excluding repetitions
      */
-    virtual unsigned name(DataType type, wreport::Varcode code, const std::string& tag, std::string& name, std::string& mnemo) = 0;
+    virtual unsigned name(DataType type, wreport::Varcode code, size_t tag, std::string& name, std::string& mnemo) = 0;
 
     /**
      * Get a namer by type.

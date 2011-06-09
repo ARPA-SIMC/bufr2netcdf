@@ -21,7 +21,7 @@
 
 #include "ncoutfile.h"
 #include "utils.h"
-#include <netcdf.h>
+#include <cstdio>
 
 using namespace wreport;
 using namespace std;
@@ -64,6 +64,14 @@ void NCOutfile::end_define_mode()
 {
     int res = nc_enddef(ncid);
     error_netcdf::throwf_iferror(res, "leaving define mode for file %s", fname.c_str());
+}
+
+int NCOutfile::def_var(const char* name, nc_type xtype, int ndims, const int *dimidsp)
+{
+    int varid;
+    int res = nc_def_var(ncid, name, xtype, ndims, dimidsp, &varid);
+    error_netcdf::throwf_iferror(res, "creating variable %s", name);
+    return varid;
 }
 
 }

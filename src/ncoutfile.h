@@ -23,6 +23,7 @@
 #define B2NC_NCOUTFILE_H
 
 #include <string>
+#include <netcdf.h>
 
 namespace wreport {
 struct BufrBulletin;
@@ -60,6 +61,11 @@ public:
      * End NetCDF define mode
      */
     void end_define_mode();
+
+    /**
+     * Wrapper around nc_def_var
+     */
+    int def_var(const char* name, nc_type xtype, int ndims, const int *dimidsp);
 };
 
 }

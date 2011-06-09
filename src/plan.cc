@@ -22,12 +22,14 @@
 #include "plan.h"
 #include "valarray.h"
 #include "options.h"
-//#include "utils.h"
+#include "ncoutfile.h"
+#include "utils.h"
 //#include "mnemo.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
-//#include <netcdf.h>
+#include <netcdf.h>
 #include <stack>
+#include <map>
 #include <cstring>
 
 using namespace wreport;
@@ -62,7 +64,7 @@ void Variable::print(FILE* out)
 }
 
 
-Section::Section(size_t id) : id(id), loop_var(0), loop_var_index(0), cursor(0) {}
+Section::Section(size_t id) : id(id), cursor(0) {}
 Section::~Section()
 { 
     for (vector<Variable*>::iterator i = entries.begin();
@@ -78,7 +80,29 @@ Variable& Section::current() const
     return *entries[cursor];
 }
 
-void Section::print(FILE* out)
+void Section::define(NCOutfile& outfile)
+{
+    for (vector<plan::Variable*>::iterator i = entries.begin();
+            i != entries.end(); ++i)
+    {
+        Variable& v = **i;
+        if (v.data) v.data->define(outfile);
+        if (v.qbits) v.qbits->define(outfile);
+    }
+}
+
+void Section::putvar(NCOutfile& outfile) const
+{
+    for (vector<plan::Variable*>::const_iterator i = entries.begin();
+            i != entries.end(); ++i)
+    {
+        Variable& v = **i;
+        if (v.data) v.data->putvar(outfile);
+        if (v.qbits) v.qbits->putvar(outfile);
+    }
+}
+
+void Section::print(FILE* out) const
 {
     for (size_t i = 0; i < entries.size(); ++i)
     {
@@ -91,6 +115,27 @@ void Section::print(FILE* out)
 
 namespace {
 
+/**
+ * RAII-style temporarily override a variable value for the duration of the
+ * scope
+ */
+template<typename T>
+struct ValueOverride
+{
+    T& val;
+    T old_val;
+
+    ValueOverride(T& val, T new_val)
+        : val(val), old_val(val)
+    {
+        val = new_val;
+    }
+    ~ValueOverride()
+    {
+        val = old_val;
+    }
+};
+
 struct PlanMaker : opcode::Explorer
 {
     struct Section
@@ -100,56 +145,123 @@ struct PlanMaker : opcode::Explorer
         // Section we are editing
         plan::Section& section;
 
-        // True if
+        // True if qbits are expected at this point of decoding
         bool has_qbits;
 
+        // Currently active context information
+        map<Varcode, const ValArray*> context;
+
+        // Previously seen varcode (0 at start of subset or if the previous varcode
+        // had xx >= 10)
+        Varcode prev_code;
+        // Number of times in a row the previous varcode appeared
+        unsigned prev_code_count;
+
+
         Section(PlanMaker& maker, plan::Section& section)
-            : maker(maker), section(section), has_qbits(false)
+            : maker(maker), section(section), has_qbits(false), prev_code(0), prev_code_count(0)
         {
         }
 
-        auto_ptr<ValArray> make_array(Namer::DataType type, Varinfo info)
+        auto_ptr<ValArray> make_array(Namer::DataType type, Varinfo name_info, Varinfo type_info)
         {
             string name;
             string mnemo;
-            char TODO_temporary_tag[20];
-            snprintf(TODO_temporary_tag, 20, "%zd", section.id);
-            unsigned rcnt = maker.namer->name(type, info->var, TODO_temporary_tag, name, mnemo);
-            auto_ptr<ValArray> arr(ValArray::make_singlevalarray(type, info));
+            unsigned rcnt = maker.namer->name(type, name_info->var, section.id, name, mnemo);
+            auto_ptr<ValArray> arr;
+            if (section.id == 0)
+                arr.reset(ValArray::make_singlevalarray(type, type_info));
+            else
+                arr.reset(ValArray::make_multivalarray(type, type_info, section.loop));
             arr->name = name;
             arr->mnemo = mnemo;
             arr->rcnt = rcnt;
             arr->type = type;
-
-            // TODO if (toplevel)
-                // TODO return ValArray::make_singlevalarray(type, info);
-            // TODO else
-                // TODO arr.reset(ValArray::make_multivalarray(type, info, i->second));
-
 
             return arr;
         }
 
         auto_ptr<ValArray> make_data_array(Varinfo info)
         {
-            return make_array(Namer::DT_DATA, info);
+            auto_ptr<ValArray> arr = make_array(Namer::DT_DATA, info, info);
+
+            // Add references information to arr
+            for (map<Varcode, const ValArray*>::const_iterator i = context.begin();
+                    i != context.end(); ++i)
+                arr->references.push_back(*i);
+
+            return arr;
         }
 
         auto_ptr<ValArray> make_qbits_array(Varinfo info, ValArray& master)
         {
-            auto_ptr<ValArray> arr = make_array(Namer::DT_QBITS, info);
+            auto_ptr<ValArray> arr = make_array(Namer::DT_QBITS, info, maker.qbits_info);
             arr->master = &master;
             master.slaves.push_back(arr.get());
             return arr;
         }
 
+        auto_ptr<ValArray> make_char_array(Varcode code)
+        {
+            MutableVarinfo name_info = MutableVarinfo::create_singleuse();
+            name_info->set_string(WR_VAR(2, 5, 0), "C05YYY character data", WR_VAR_Y(code));
+
+            MutableVarinfo type_info = MutableVarinfo::create_singleuse();
+            type_info->set_string(code, "C05YYY character data", WR_VAR_Y(code));
+
+            auto_ptr<ValArray> arr = make_array(Namer::DT_CHAR, name_info, type_info);
+            return arr;
+        }
+
         void add_data(Varinfo info)
         {
+            /**
+             * Some context code invalidate others, and we need to do it right
+             * away because the invalidation takes effect also for themselves
+             */
+            switch (info->var)
+            {
+                case WR_VAR(0, 4, 24):
+                    context.erase(WR_VAR(0, 4, 25));
+                    break;
+                case WR_VAR(0, 4, 25):
+                    for (int i = 0; i < 4; ++i)
+                        context.erase(WR_VAR(i, 4, 24));
+                    break;
+            }
+
             section.entries.push_back(new plan::Variable);
             plan::Variable& pi = *section.entries.back();
             pi.data = make_data_array(info).release();
-            if (has_qbits)
+            if (has_qbits && WR_VAR_F(info->var) == 0 && WR_VAR_X(info->var) != 31)
                 pi.qbits = make_qbits_array(info, *pi.data).release();
+
+            // Update current context information
+            if (WR_VAR_F(info->var) == 0 && WR_VAR_X(info->var) < 10)
+            {
+                Varcode code = info->var;
+                if (prev_code == code)
+                {
+                    // Encode the repetition count in F
+                    // 2 consecutive context variables)
+                    code |= WR_VAR(prev_code_count, 0, 0);
+
+                    // Prevent roll over after 3 times: in those cases we just
+                    // overwrite the 4th, but the maximum we should see is really 2
+                    // in a row
+                    if (prev_code_count < 3)
+                        ++prev_code_count;
+                }
+                else
+                {
+                    prev_code = code;
+                    prev_code_count = 1;
+                }
+                context[code] = pi.data;
+            } else {
+                prev_code = 0;
+                prev_code_count = 0;
+            }
         }
 
         void add_subplan(plan::Section& subplan)
@@ -157,6 +269,13 @@ struct PlanMaker : opcode::Explorer
             section.entries.push_back(new plan::Variable);
             plan::Variable& pi = *section.entries.back();
             pi.subsection = &subplan;
+        }
+
+        void add_char(Varcode code)
+        {
+            section.entries.push_back(new plan::Variable);
+            plan::Variable& pi = *section.entries.back();
+            pi.data = make_char_array(code).release();
         }
     };
 
@@ -173,13 +292,17 @@ struct PlanMaker : opcode::Explorer
     Namer* namer;
 
     // Index used in numbering loops for naming in NetCDF attributes
-    unsigned loop_var_index;
+    unsigned loop_index;
+
+    // Varinfo describing qbits variables
+    Varinfo qbits_info;
 
     PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
         : plan(plan),
           btable(b.btable),
           namer(Namer::get(opts).release()),
-          loop_var_index(0)
+          loop_index(0),
+          qbits_info(b.btable->query(WR_VAR(0, 33, 3)))
     {
         current_plan.push(Section(*this, plan.create_section()));
     }
@@ -210,26 +333,33 @@ struct PlanMaker : opcode::Explorer
                 // Toggle has_qbits flag
                 current_plan.top().has_qbits = WR_VAR_Y(code) != 0;
                 break;
-            case 5:
+            case 5: {
                 // TODO: current plan.push_back(ValArray(code))
+                Section& s = current_plan.top();
+                s.add_char(code);
                 break;
+            }
         }
     }
 
     void r_replication_begin(Varcode code, Varcode delayed_code)
     {
         plan::Section& ns = plan.create_section();
+        ns.loop.index = loop_index++;
 
         if (delayed_code)
         {
             b_variable(delayed_code);
-            ns.loop_var = current_plan.top().section.entries.back();
-            ns.loop_var_index = loop_var_index++;
+            ns.loop.var = current_plan.top().section.entries.back()->data;
         }
 
         Section& s = current_plan.top();
         current_plan.push(Section(*this, ns));
         s.add_subplan(ns);
+
+        // Init subplan context with a fork of the parent context
+        current_plan.top().context = s.context;
+        current_plan.top().has_qbits = s.has_qbits;
     }
 
     void r_replication_end(Varcode code)
@@ -267,7 +397,7 @@ plan::Section& Plan::create_section()
     return *sections.back();
 }
 
-void Plan::print(FILE* out)
+void Plan::print(FILE* out) const
 {
     for (size_t i = 0; i < sections.size(); ++i)
     {
@@ -276,6 +406,19 @@ void Plan::print(FILE* out)
     }
 }
 
+void Plan::define(NCOutfile& outfile)
+{
+    for (vector<plan::Section*>::iterator i = sections.begin();
+            i != sections.end(); ++i)
+        (*i)->define(outfile);
+}
+
+void Plan::putvar(NCOutfile& outfile) const
+{
+    for (vector<plan::Section*>::const_iterator i = sections.begin();
+            i != sections.end(); ++i)
+        (*i)->putvar(outfile);
+}
 
 
 }

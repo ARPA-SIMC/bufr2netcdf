@@ -72,8 +72,6 @@ struct Counter
 
     Counter(SeenCounter& seen_counter) : seen_counter(seen_counter), pos(0) {}
 
-    void reset() { pos = 0; }
-
     unsigned get_index(Varcode code)
     {
         unsigned index;
@@ -95,11 +93,11 @@ struct Counter
     }
 };
 
-struct CounterSet : public std::map<string, Counter>
+struct CounterSet : public std::map<size_t, Counter>
 {
     SeenCounter seen_counter;
 
-    Counter& get_counter(const std::string& tag)
+    Counter& get_counter(size_t tag)
     {
         iterator i = find(tag);
         if (i != end())
@@ -126,17 +124,11 @@ public:
         table = mnemo::Table::get(14);
     }
 
-    virtual void start(const std::string& tag)
-    {
-        for (int i = 0; i < DT_MAX; ++i)
-            counters[i].get_counter(tag).reset();
-    }
-
-    virtual unsigned name(DataType type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
+    virtual unsigned name(DataType type, Varcode code, size_t tag, std::string& name, std::string& mnemo)
     {
         // Get/create counter for this tag
         Counter& counter = counters[type].get_counter(tag);
-        Varcode effective_code = type == DT_CHAR ? WR_VAR(2, 8, 0) : code;
+        Varcode effective_code = type == DT_CHAR ? WR_VAR(2, 5, 0) : code;
         unsigned index = counter.get_index(effective_code);
 
         // Plain name
@@ -178,7 +170,7 @@ public:
 
 struct MnemoNamer : public PlainNamer
 {
-    virtual unsigned name(DataType type, Varcode code, const std::string& tag, std::string& name, std::string& mnemo)
+    virtual unsigned name(DataType type, Varcode code, size_t tag, std::string& name, std::string& mnemo)
     {
         unsigned index = PlainNamer::name(type, code, tag, name, mnemo);
         if (!mnemo.empty())

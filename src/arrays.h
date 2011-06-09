@@ -47,11 +47,7 @@ struct Arrays
 {
     Plan plan;
 
-    Namer* namer;
     std::vector<ValArray*> arrays;
-    std::map<std::string, unsigned> byname;
-    // Map loop tags to dimension information
-    std::map<std::string, LoopInfo> dimnames;
 
     // Pointers used for date/time aggregations (NULL if not found)
     ValArray* date_year;
@@ -64,14 +60,10 @@ struct Arrays
     int date_varid;
     int time_varid;
 
-    unsigned loop_idx;
     int bufr_idx;
 
     Arrays(const Options& opts);
     ~Arrays();
-
-    void start(const std::string& tag);
-    ValArray& get_valarray(Namer::DataType type, const wreport::Var& var, const std::string& tag, const wreport::Var* attr=0, ValArray* master=0);
 
     /**
      * Adds all the subsets for a bulletin.
@@ -84,6 +76,7 @@ struct Arrays
     void dump(FILE* out);
 };
 
+/// Array for binary dumps of BUFR sections
 struct Sections
 {
     std::vector<std::string> values;

@@ -264,16 +264,23 @@ struct OutfileImpl : public Outfile
         if (ncout.ncid == -1)
             return;
 
-        // Define all other dimensions, variables and attributes
-        filler.define(ncout);
+        try {
+            // Define all other dimensions, variables and attributes
+            filler.define(ncout);
 
-        // End define mode
-        ncout.end_define_mode();
+            // End define mode
+            ncout.end_define_mode();
 
-        // Put variables
-        filler.putvar(ncout);
+            // Put variables
+            filler.putvar(ncout);
 
-        ncout.close();
+            ncout.close();
+        } catch (...) {
+            // Close the file anyway in case of error, so we don't try to write
+            // things out again in the destructor
+            ncout.close();
+            throw;
+        }
     }
 
     virtual void add_bufr(const wreport::BufrBulletin& bulletin)

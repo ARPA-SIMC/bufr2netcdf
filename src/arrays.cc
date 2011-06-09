@@ -57,9 +57,7 @@ protected:
     unsigned rep_nesting;
     std::vector<unsigned> rep_stack;
     map<Varcode, const ValArray*> context;
-    string tag;
     int& bufr_idx;
-    ValArray* loop_var;
     const Vartable* default_vartable;
 
     // quality information is stored in netcdf as CODE TABLE 033003 values
@@ -77,25 +75,12 @@ protected:
     // Number of times in a row the previous varcode appeared
     unsigned prev_code_count;
 
-    void update_tag()
-    {
-        tag.clear();
-        for (unsigned i = 0; i < rep_nesting; ++i)
-        {
-            if (i != 0) tag += "_";
-            char buf[20];
-            snprintf(buf, 20, "%u", rep_stack[rep_nesting]);
-            tag += buf;
-        }
-    }
-
 public:
     ArrayBuilder(const Bulletin& bulletin, Arrays& arrays, int& bufr_idx)
         : bulletin::ConstBaseDDSExecutor(bulletin),
           arrays(arrays),
           rep_nesting(0),
           bufr_idx(bufr_idx),
-          loop_var(0),
           default_vartable(Vartable::get("B0000000000000014000")),
           qbits(default_vartable->query(WR_VAR(0, 33, 3))),
           prev_code(0), prev_code_count(0)
@@ -109,10 +94,7 @@ public:
             error_consistency::throwf("At start of subset, rep_nesting is %u instead of 0", rep_nesting);
         rep_stack.clear();
         context.clear();
-        update_tag();
-        arrays.start(tag);
         ++bufr_idx;
-        loop_var = 0;
         prev_code = 0;
         prev_code_count = 0;
 
@@ -128,7 +110,6 @@ public:
         while (rep_nesting >= rep_stack.size())
             rep_stack.push_back(0u);
         ++(rep_stack[rep_nesting]);
-        update_tag();
 
         plan::Section* plan_sec = cur_section.top()->current().subsection;
         if (!plan_sec)
@@ -140,15 +121,12 @@ public:
 
     virtual void start_repetition()
     {
-        arrays.start(tag);
         cur_section.top()->cursor = 0;
     }
 
     virtual void pop_repetition()
     {
         --rep_nesting;
-        update_tag();
-        loop_var = 0;
 
         cur_section.pop();
         cur_section.top()->cursor++;
@@ -182,112 +160,67 @@ public:
     virtual void encode_var(Varinfo info, unsigned var_pos)
     {
         const Var& var = get_var(var_pos);
-        ValArray& arr = arrays.get_valarray(Namer::DT_DATA, var, tag);
-        arr.add(var, bufr_idx);
-
-        if (arr.newly_created)
+        plan::Variable& v = cur_section.top()->current();
+        if (v.subsection)
+            error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
+        if (v.data)
         {
-            arr.loop_var = loop_var;
-            arr.newly_created = false;
-        }
+            if (v.data->info->var != info->var)
+                error_consistency::throwf("out of sync at %u: vars mismatch", cur_section.top()->cursor);
+            v.data->add(var, bufr_idx);
 
-        if (init_qbits(var))
-        {
-            ValArray& attr_arr = arrays.get_valarray(Namer::DT_QBITS, var, tag, &qbits, &arr);
-            attr_arr.add(qbits, bufr_idx);
-            if (attr_arr.newly_created)
-            {
-                attr_arr.loop_var = loop_var;
-                attr_arr.newly_created = false;
-            }
-        }
-
-        // Add references information to arr
-        if (arr.references.empty())
-            for (map<Varcode, const ValArray*>::const_iterator i = context.begin();
-                    i != context.end(); ++i)
-                arr.references.push_back(*i);
-
-        // Update current context information
-        if (WR_VAR_X(var.code()) < 10)
-        {
-            Varcode ctx_code = var.code();
-            if (prev_code == var.code())
-            {
-                // Encode the repetition count in F
-                // 2 consecutive context variables)
-                ctx_code |= WR_VAR(prev_code_count, 0, 0);
-
-                // Prevent roll over after 3 times: in those cases we just
-                // overwrite the 4th, but the maximum we should see is really 2
-                // in a row
-                if (prev_code_count < 3)
-                    ++prev_code_count;
-            }
-            else
-            {
-                prev_code = var.code();
-                prev_code_count = 1;
-            }
-            context[ctx_code] = &arr;
-        } else {
-            prev_code = 0;
-            prev_code_count = 0;
-        }
-
-        if (WR_VAR_X(var.code()) == 31)
-        {
+            // Take note of significant ValArrays
             switch (var.code())
             {
-                case WR_VAR(0, 31, 1):
-                case WR_VAR(0, 31, 2):
-                    loop_var = &arr;
-                    break;
+                case WR_VAR(0, 4, 1): if (!arrays.date_year) arrays.date_year = v.data; break;
+                case WR_VAR(0, 4, 2): if (!arrays.date_month) arrays.date_month = v.data; break;
+                case WR_VAR(0, 4, 3): if (!arrays.date_day) arrays.date_day = v.data; break;
+                case WR_VAR(0, 4, 4): if (!arrays.time_hour) arrays.time_hour = v.data; break;
+                case WR_VAR(0, 4, 5): if (!arrays.time_minute) arrays.time_minute = v.data; break;
+                case WR_VAR(0, 4, 6): if (!arrays.time_second) arrays.time_second = v.data; break;
             }
         }
-
-        ValArray* plan_var = cur_section.top()->current().data;
-        if (!plan_var && cur_section.top()->current().subsection)
-            error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
-        if (plan_var->info->var != info->var)
-            error_consistency::throwf("out of sync at %u: vars mismatch", cur_section.top()->cursor);
+        if (v.qbits && init_qbits(var))
+            v.qbits->add(qbits, bufr_idx);
         cur_section.top()->cursor++;
     }
 
     virtual void encode_char_data(Varcode code, unsigned var_pos)
     {
         const Var& var = get_var(var_pos);
-        ValArray& arr = arrays.get_valarray(Namer::DT_CHAR, var, tag);
-        if (arr.newly_created)
+        plan::Variable& v = cur_section.top()->current();
+        if (v.subsection)
+            error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
+        if (v.data)
         {
-            arr.loop_var = loop_var;
-            arr.newly_created = false;
+            if (WR_VAR_F(v.data->info->var) != WR_VAR_F(var.code())
+              || WR_VAR_X(v.data->info->var) != WR_VAR_X(var.code()))
+                error_consistency::throwf("out of sync at %u: vars mismatch", cur_section.top()->cursor);
+            v.data->add(var, bufr_idx);
         }
+#if 0
+        ValArray& arr = arrays.get_valarray(Namer::DT_CHAR, var, tag);
         arr.add(var, bufr_idx);
+#endif
     }
 };
 
 
 
 Arrays::Arrays(const Options& opts)
-    : plan(opts), namer(Namer::get(opts).release()),
+    : plan(opts),
       date_year(0), date_month(0), date_day(0),
       time_hour(0), time_minute(0), time_second(0),
       date_varid(-1), time_varid(-1),
-      loop_idx(0), bufr_idx(-1)
+      bufr_idx(-1)
 {
 }
 
 Arrays::~Arrays()
 {
-    delete namer;
 }
 
-void Arrays::start(const std::string& tag)
-{
-    namer->start(tag);
-}
-
+#if 0
 ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::string& tag, const Var* attr, ValArray* master)
 {
     string name, mnemo;
@@ -343,6 +276,7 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
 
     return *arrays.back();
 }
+#endif
 
 void Arrays::add(const Bulletin& bulletin)
 {
@@ -369,24 +303,14 @@ bool Arrays::define(NCOutfile& outfile)
     int bufrdim = outfile.dim_bufr_records;
 
     // Define the array size dimensions
-    for (std::map<std::string, LoopInfo>::iterator i = dimnames.begin();
-            i != dimnames.end(); ++i)
-    {
-        ValArray* va = arrays[i->second.firstarr];
-        i->second.define(outfile, va->get_max_rep());
-    }
-
-    for (vector<ValArray*>::const_iterator i = arrays.begin();
-            i != arrays.end(); ++i)
-        (*i)->define(ncid, bufrdim);
+    plan.define(outfile);
 
     if (date_year && date_month && date_day)
     {
-        int res = nc_def_var(ncid, "DATE", NC_INT, 1, &bufrdim, &date_varid);
-        error_netcdf::throwf_iferror(res, "creating variable DATE");
+        date_varid = outfile.def_var("DATE", NC_INT, 1, &bufrdim);
 
         int missing = NC_FILL_INT;
-        res = nc_put_att_int(ncid, date_varid, "_FillValue", NC_INT, 1, &missing);
+        int res = nc_put_att_int(ncid, date_varid, "_FillValue", NC_INT, 1, &missing);
         error_netcdf::throwf_iferror(res, "creating _FillValue attribute in DATE");
 
         const char* attname = "Date as YYYYMMDD";
@@ -405,11 +329,10 @@ bool Arrays::define(NCOutfile& outfile)
 
     if (time_hour)
     {
-        int res = nc_def_var(ncid, "TIME", NC_INT, 1, &bufrdim, &time_varid);
-        error_netcdf::throwf_iferror(res, "creating variable TIME");
+        time_varid = outfile.def_var("TIME", NC_INT, 1, &bufrdim);
 
         int missing = NC_FILL_INT;
-        res = nc_put_att_int(ncid, time_varid, "_FillValue", NC_INT, 1, &missing);
+        int res = nc_put_att_int(ncid, time_varid, "_FillValue", NC_INT, 1, &missing);
         error_netcdf::throwf_iferror(res, "creating _FillValue attribute in TIME");
 
         const char* attname = "Time as HHMMSS";
@@ -436,10 +359,9 @@ bool Arrays::define(NCOutfile& outfile)
 
 void Arrays::putvar(NCOutfile& outfile) const
 {
+    plan.putvar(outfile);
+
     int ncid = outfile.ncid;
-    for (vector<ValArray*>::const_iterator i = arrays.begin();
-            i != arrays.end(); ++i)
-        (*i)->putvar(ncid);
 
     if (date_year && date_month && date_day)
     {
@@ -535,8 +457,7 @@ bool Sections::define(NCOutfile& outfile)
     snprintf(name, 20, "section%d", idx);
 
     int dims[] = { outfile.dim_bufr_records, nc_dimid };
-    res = nc_def_var(ncid, name, NC_BYTE, 2, dims, &nc_varid);
-    error_netcdf::throwf_iferror(res, "creating variable %s", name);
+    nc_varid = outfile.def_var(name, NC_BYTE, 2, dims);
 
     return true;
 }
@@ -590,11 +511,10 @@ bool IntArray::define(NCOutfile& outfile)
     int bufrdim = outfile.dim_bufr_records;
 
     if (values.empty()) return false;
-    int res = nc_def_var(ncid, name.c_str(), NC_INT, 1, &bufrdim, &nc_varid);
-    error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+    nc_varid = outfile.def_var(name.c_str(), NC_INT, 1, &bufrdim);
 
     int missing = NC_FILL_INT;
-    res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
+    int res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
     error_netcdf::throwf_iferror(res, "creating _FillValue attribute in %s", name.c_str());
 
     return true;

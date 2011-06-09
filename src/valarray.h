@@ -35,18 +35,29 @@ struct Var;
 namespace b2nc {
 
 struct NCOutfile;
+struct ValArray;
 
 struct LoopInfo
 {
-    std::string dimname;
-    size_t firstarr;
+    /**
+     * Pointer to variable holding the delayed replication count for this
+     * section's loop, if any
+     */
+    ValArray* var;
+
+    /**
+     * Index of the loop, used to name Loop_NNN_maxlen attributes
+     */
+    unsigned index;
+
+    /// NetCDF dimension ID of the loop dimension
     int nc_dimid;
-    LoopInfo(const std::string& dimname, size_t firstarr)
-        : dimname(dimname), firstarr(firstarr), nc_dimid(-1) {}
+
+    LoopInfo()
+        : var(0), index(0), nc_dimid(-1) {}
 
     void define(NCOutfile& outfile, size_t size);
 };
-
 
 struct ValArray
 {
@@ -59,12 +70,8 @@ struct ValArray
     Namer::DataType type;
     ValArray* master;
     std::vector<ValArray*> slaves;
-    ValArray* loop_var;
     // True if the value of the variable never changes
     bool is_constant;
-    // Marker for newly created arrays, possibly still in need of
-    // initialisation
-    bool newly_created;
 
     ValArray(wreport::Varinfo info);
     virtual ~ValArray() {}
@@ -83,13 +90,13 @@ struct ValArray
     /// all undefined values
     virtual bool has_values() const = 0;
 
-    virtual bool define(int ncid, int bufrdim) = 0;
-    virtual void putvar(int ncid) const = 0;
+    virtual bool define(NCOutfile& outfile) = 0;
+    virtual void putvar(NCOutfile& outfile) const = 0;
 
     virtual void dump(FILE* out) = 0;
 
     static ValArray* make_singlevalarray(Namer::DataType type, wreport::Varinfo info);
-    static ValArray* make_multivalarray(Namer::DataType type, wreport::Varinfo info, const LoopInfo& loopinfo);
+    static ValArray* make_multivalarray(Namer::DataType type, wreport::Varinfo info, LoopInfo& loopinfo);
 };
 
 }

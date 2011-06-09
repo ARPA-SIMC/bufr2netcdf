@@ -60,10 +60,13 @@ void to::test<1>()
     // TODO
 }
 
+// Test exporting string arrays
 template<> template<>
 void to::test<2>()
 {
-    LoopInfo loopinfo("foo", 0);
+    // Loop variable (simulate delayed replication)
+    LoopInfo loopinfo;
+    // Multidimensional variable
     Var var(table->query(WR_VAR(0, 1, 15)));
     auto_ptr<ValArray> arr(ValArray::make_multivalarray(Namer::DT_DATA, var.info(), loopinfo));
     arr->name = "TEST";
@@ -86,10 +89,9 @@ void to::test<2>()
     NCOutfile outfile(opts);
     outfile.open(testfname);
 
-    loopinfo.define(outfile, 2);
-    arr->define(outfile.ncid, outfile.dim_bufr_records);
+    arr->define(outfile);
     outfile.end_define_mode();
-    arr->putvar(outfile.ncid);
+    arr->putvar(outfile);
 
     int res;
 

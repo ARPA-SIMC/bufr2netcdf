@@ -23,6 +23,7 @@
 #include "utils.h"
 #include "mnemo.h"
 #include "ncoutfile.h"
+#include "plan.h"
 #include <wreport/error.h>
 #include <wreport/var.h>
 #include <netcdf.h>
@@ -47,12 +48,14 @@ template<> inline int nc_type<std::string>() { return NC_CHAR; }
 
 void LoopInfo::define(NCOutfile& outfile, size_t size)
 {
-    int res = nc_def_dim(outfile.ncid, dimname.c_str(), size, &nc_dimid);
-    error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
+    char dn[20];
+    snprintf(dn, 20, "Loop_%03d_maxlen", index);
+    int res = nc_def_dim(outfile.ncid, dn, size, &nc_dimid);
+    error_netcdf::throwf_iferror(res, "creating %s dimension", dn);
 }
 
 ValArray::ValArray(wreport::Varinfo info)
-    : info(info), master(0), loop_var(0), is_constant(true), newly_created(true)
+    : info(info), master(0), is_constant(true)
 {
 }
 
@@ -230,8 +233,10 @@ struct SingleNumberArray : public SingleValArray<TYPE>
 {
     SingleNumberArray(Varinfo info) : SingleValArray<TYPE>(info) {}
 
-    bool define(int ncid, int bufrdim)
+    bool define(NCOutfile& outfile)
     {
+        int bufrdim = outfile.dim_bufr_records;
+
         // Skip variable if it's never been found
         if (this->vars.empty())
         {
@@ -239,12 +244,11 @@ struct SingleNumberArray : public SingleValArray<TYPE>
             return false;
         }
 
-        int res = nc_def_var(ncid, this->name.c_str(), nc_type<TYPE>(), 1, &bufrdim, &this->nc_varid);
-        error_netcdf::throwf_iferror(res, "creating variable %s", this->name.c_str());
+        this->nc_varid = outfile.def_var(this->name.c_str(), nc_type<TYPE>(), 1, &bufrdim);
 
-        this->add_common_attributes(ncid);
+        this->add_common_attributes(outfile.ncid);
 
-        return this->nc_varid;
+        return true;
     }
 };
 
@@ -252,12 +256,12 @@ struct SingleIntValArray : public SingleNumberArray<int>
 {
     SingleIntValArray(Varinfo info) : SingleNumberArray<int>(info) {}
 
-    void putvar(int ncid) const
+    void putvar(NCOutfile& outfile) const
     {
         if (vars.empty()) return;
         size_t start[] = {0};
         size_t count[] = {vars.size()};
-        int res = nc_put_vara_int(ncid, nc_varid, start, count, vars.data());
+        int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, vars.data());
         error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
     }
 };
@@ -266,12 +270,12 @@ struct SingleFloatValArray : public SingleNumberArray<float>
 {
     SingleFloatValArray(Varinfo info) : SingleNumberArray<float>(info) {}
 
-    void putvar(int ncid) const
+    void putvar(NCOutfile& outfile) const
     {
         if (vars.empty()) return;
         size_t start[] = {0};
         size_t count[] = {vars.size()};
-        int res = nc_put_vara_float(ncid, nc_varid, start, count, vars.data());
+        int res = nc_put_vara_float(outfile.ncid, nc_varid, start, count, vars.data());
         error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
     }
 };
@@ -280,8 +284,10 @@ struct SingleStringValArray : public SingleValArray<std::string>
 {
     SingleStringValArray(Varinfo info) : SingleValArray<std::string>(info) {}
 
-    bool define(int ncid, int bufrdim)
+    bool define(NCOutfile& outfile)
     {
+        int ncid = outfile.ncid;
+
         // Skip variable if it's never been found
         if (vars.empty())
         {
@@ -289,20 +295,19 @@ struct SingleStringValArray : public SingleValArray<std::string>
             return false;
         }
 
-        int dims[2] = { bufrdim, 0 };
+        int dims[2] = { outfile.dim_bufr_records, 0 };
         string dimname = name + "_strlen";
         int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[1]);
         error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
 
-        res = nc_def_var(ncid, name.c_str(), NC_CHAR, 2, dims, &nc_varid);
-        error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+        nc_varid = outfile.def_var(name.c_str(), NC_CHAR, 2, dims);
 
         add_common_attributes(ncid);
 
-        return nc_varid;
+        return true;
     }
 
-    void putvar(int ncid) const
+    void putvar(NCOutfile& outfile) const
     {
         if (vars.empty()) return;
 
@@ -321,9 +326,9 @@ struct SingleStringValArray : public SingleValArray<std::string>
                 memcpy(value, vars[i].data(), len);
                 for (size_t i = len; i < info->len; ++i)
                     value[i] = ' ';
-                res = nc_put_vara_text(ncid, nc_varid, start, count, value);
+                res = nc_put_vara_text(outfile.ncid, nc_varid, start, count, value);
             } else
-                res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
+                res = nc_put_vara_text(outfile.ncid, nc_varid, start, count, missing);
             error_netcdf::throwf_iferror(res, "storing %zd string values", vars.size());
         }
     }
@@ -334,10 +339,10 @@ template<typename TYPE>
 struct MultiValArray : public BaseValArray
 {
     std::vector< std::vector<TYPE> > arrs;
-    const LoopInfo& loopinfo;
+    LoopInfo& loopinfo;
     TYPE last_val;
 
-    MultiValArray(Varinfo info, const LoopInfo& loopinfo)
+    MultiValArray(Varinfo info, LoopInfo& loopinfo)
         : BaseValArray(info), loopinfo(loopinfo), last_val(nc_fill<TYPE>()) {}
 
     bool has_values() const
@@ -397,6 +402,21 @@ struct MultiValArray : public BaseValArray
         return res;
     }
 
+    bool define(NCOutfile& outfile)
+    {
+        // Skip variable if it's never been found
+        if (this->arrs.empty())
+        {
+            this->nc_varid = -1;
+            return false;
+        }
+
+        if (loopinfo.nc_dimid == -1)
+            loopinfo.define(outfile, get_max_rep());
+        return true;
+    }
+
+
     void dump(FILE* out)
     {
         for (size_t a = 0; a < arrs.size(); ++a)
@@ -412,29 +432,26 @@ struct MultiValArray : public BaseValArray
 template<typename TYPE>
 struct MultiNumberValArray : public MultiValArray<TYPE>
 {
-    MultiNumberValArray(Varinfo info, const LoopInfo& loopinfo)
+    MultiNumberValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiValArray<TYPE>(info, loopinfo) {}
 
-    bool define(int ncid, int bufrdim)
+    bool define(NCOutfile& outfile)
     {
-        // Skip variable if it's never been found
-        if (this->arrs.empty())
-        {
-            this->nc_varid = -1;
+        if (!MultiValArray<TYPE>::define(outfile))
             return false;
-        }
 
-        int dims[3] = { bufrdim, this->loopinfo.nc_dimid };
-        int res = nc_def_var(ncid, this->name.c_str(), nc_type<TYPE>(), 2, dims, &this->nc_varid);
-        error_netcdf::throwf_iferror(res, "creating variable %s", this->name.c_str());
+        int ncid = outfile.ncid;
+
+        int dims[] = { outfile.dim_bufr_records, this->loopinfo.nc_dimid };
+        this->nc_varid = outfile.def_var(this->name.c_str(), nc_type<TYPE>(), 2, dims);
 
         this->add_common_attributes(ncid);
 
-        // Only set to loop_var_name if it changes across BUFRs
+        // Only set to non-const if it changes across BUFRs
         string dimlenname = "_constant";
-        if (this->loop_var && !this->loop_var->is_constant)
-            dimlenname = this->loop_var->name;
-        res = nc_put_att_text(ncid, this->nc_varid, "dim1_length", dimlenname.size(), dimlenname.data());
+        if (this->loopinfo.var && !this->loopinfo.var->is_constant)
+            dimlenname = this->loopinfo.var->name;
+        int res = nc_put_att_text(ncid, this->nc_varid, "dim1_length", dimlenname.size(), dimlenname.data());
         error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", this->name.c_str());
 
         return true;
@@ -463,10 +480,10 @@ struct MultiNumberValArray : public MultiValArray<TYPE>
 
 struct MultiIntValArray : public MultiNumberValArray<int>
 {
-    MultiIntValArray(Varinfo info, const LoopInfo& loopinfo)
+    MultiIntValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiNumberValArray<int>(info, loopinfo) {}
 
-    void putvar(int ncid) const
+    void putvar(NCOutfile& outfile) const
     {
         if (arrs.empty()) return;
 
@@ -479,7 +496,7 @@ struct MultiIntValArray : public MultiNumberValArray<int>
         {
             const int* to_nc = to_fixed_array(i, clean_vals, arrsize);
             start[0] = i;
-            int res = nc_put_vara_int(ncid, nc_varid, start, count, to_nc);
+            int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, to_nc);
             error_netcdf::throwf_iferror(res, "storing %zd int values", arrsize);
         }
     }
@@ -487,10 +504,10 @@ struct MultiIntValArray : public MultiNumberValArray<int>
 
 struct MultiFloatValArray : public MultiNumberValArray<float>
 {
-    MultiFloatValArray(Varinfo info, const LoopInfo& loopinfo)
+    MultiFloatValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiNumberValArray<float>(info, loopinfo) {}
 
-    void putvar(int ncid) const
+    void putvar(NCOutfile& outfile) const
     {
         if (arrs.empty()) return;
 
@@ -503,7 +520,7 @@ struct MultiFloatValArray : public MultiNumberValArray<float>
         {
             const float* to_nc = to_fixed_array(i, clean_vals, arrsize);
             start[0] = i;
-            int res = nc_put_vara_float(ncid, nc_varid, start, count, to_nc);
+            int res = nc_put_vara_float(outfile.ncid, nc_varid, start, count, to_nc);
             error_netcdf::throwf_iferror(res, "storing %zd values", arrsize);
         }
     }
@@ -511,39 +528,36 @@ struct MultiFloatValArray : public MultiNumberValArray<float>
 
 struct MultiStringValArray : public MultiValArray<std::string>
 {
-    MultiStringValArray(Varinfo info, const LoopInfo& loopinfo)
+    MultiStringValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiValArray<std::string>(info, loopinfo) {}
 
-    bool define(int ncid, int bufrdim)
+    bool define(NCOutfile& outfile)
     {
-        // Skip variable if it's never been found
-        if (arrs.empty())
-        {
-            nc_varid = -1;
+        if (!MultiValArray<std::string>::define(outfile))
             return false;
-        }
 
-        int dims[3] = { bufrdim, loopinfo.nc_dimid, 0 };
+        int ncid = outfile.ncid;
+
+        int dims[3] = { outfile.dim_bufr_records, loopinfo.nc_dimid, 0 };
         string dimname = name + "_strlen";
         int res = nc_def_dim(ncid, dimname.c_str(), info->len, &dims[2]);
         error_netcdf::throwf_iferror(res, "creating %s dimension", dimname.c_str());
 
-        res = nc_def_var(ncid, name.c_str(), NC_CHAR, 3, dims, &nc_varid);
-        error_netcdf::throwf_iferror(res, "creating variable %s", name.c_str());
+        nc_varid = outfile.def_var(name.c_str(), NC_CHAR, 3, dims);
 
         add_common_attributes(ncid);
 
-        // Only set to loop_var_name if it changes across BUFRs
+        // Only set to non-const if it changes across BUFRs
         string dimlenname = "_constant";
-        if (this->loop_var && !this->loop_var->is_constant)
-            dimlenname = this->loop_var->name;
+        if (this->loopinfo.var && !this->loopinfo.var->is_constant)
+            dimlenname = this->loopinfo.var->name;
         res = nc_put_att_text(ncid, this->nc_varid, "dim1_length", dimlenname.size(), dimlenname.data());
         error_netcdf::throwf_iferror(res, "setting dim1_length attribute for %s", this->name.c_str());
 
         return true;
     }
 
-    void putvar(int ncid) const
+    void putvar(NCOutfile& outfile) const
     {
         if (arrs.empty()) return;
 
@@ -564,13 +578,13 @@ struct MultiStringValArray : public MultiValArray<std::string>
                 start[1] = j;
                 int res;
                 if (j >= v.size() || v[j].empty())
-                    res = nc_put_vara_text(ncid, nc_varid, start, count, missing);
+                    res = nc_put_vara_text(outfile.ncid, nc_varid, start, count, missing);
                 else
                 {
                     memcpy(value, v[j].data(), v[j].size());
                     for (size_t k = v[j].size(); k < info->len; ++k)
                         value[k] = ' ';
-                    res = nc_put_vara_text(ncid, nc_varid, start, count, value);
+                    res = nc_put_vara_text(outfile.ncid, nc_varid, start, count, value);
                 }
                 error_netcdf::throwf_iferror(res, "storing %zd string values", arrsize);
             }
@@ -599,7 +613,7 @@ ValArray* ValArray::make_singlevalarray(Namer::DataType type, Varinfo info)
     }
 }
 
-ValArray* ValArray::make_multivalarray(Namer::DataType type, Varinfo info, const LoopInfo& loopinfo)
+ValArray* ValArray::make_multivalarray(Namer::DataType type, Varinfo info, LoopInfo& loopinfo)
 {
     switch (type)
     {
