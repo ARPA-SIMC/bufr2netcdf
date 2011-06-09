@@ -62,7 +62,7 @@ void Variable::print(FILE* out)
 }
 
 
-Section::Section(size_t id) : id(id), cursor(0) {}
+Section::Section(size_t id) : id(id), loop_var(0), loop_var_index(0), cursor(0) {}
 Section::~Section()
 { 
     for (vector<Variable*>::iterator i = entries.begin();
@@ -172,10 +172,14 @@ struct PlanMaker : opcode::Explorer
     // Namer used to give names to variables
     Namer* namer;
 
+    // Index used in numbering loops for naming in NetCDF attributes
+    unsigned loop_var_index;
+
     PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
         : plan(plan),
           btable(b.btable),
-          namer(Namer::get(opts).release())
+          namer(Namer::get(opts).release()),
+          loop_var_index(0)
     {
         current_plan.push(Section(*this, plan.create_section()));
     }
@@ -214,10 +218,16 @@ struct PlanMaker : opcode::Explorer
 
     void r_replication_begin(Varcode code, Varcode delayed_code)
     {
-        if (delayed_code) b_variable(delayed_code);
+        plan::Section& ns = plan.create_section();
+
+        if (delayed_code)
+        {
+            b_variable(delayed_code);
+            ns.loop_var = current_plan.top().section.entries.back();
+            ns.loop_var_index = loop_var_index++;
+        }
 
         Section& s = current_plan.top();
-        plan::Section& ns = plan.create_section();
         current_plan.push(Section(*this, ns));
         s.add_subplan(ns);
     }

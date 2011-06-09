@@ -93,6 +93,23 @@ struct Section
 {
     size_t id;
     std::vector<Variable*> entries;
+
+    /**
+     * Pointer to variable holding the delayed replication count for this
+     * section's loop, if any
+     */
+    Variable* loop_var;
+
+    /**
+     * Index of the delayed replication count used to name Loop_NNN_maxlen
+     * attributes
+     */
+    unsigned loop_var_index;
+
+    /**
+     * Cursor used when iterating the structure mapping decoded data to the
+     * plan
+     */
     unsigned cursor;
 
     Section(size_t id);
