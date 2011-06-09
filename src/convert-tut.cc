@@ -97,8 +97,6 @@ struct Convtest
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : references : VALUES : [0-9,]+ <> [0-9,]+"); // dangerous but no other way
         // TODO: see if importing WMO tables from XML brings matching long names
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : long_name : VALUES : ");
-        // TODO: see if the loop naming strategy is relevant at all
-        ignore_list.add("^DIFFER : DIMENSION NAMES FOR VARIABLE [A-Z0-9]+ : Loop_[0-9]+_maxlen <> Loop_[0-9]+_maxlen");
 
         // Uncontroversial
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CODE.TABLE <> CODE TABLE [0-9]+");
@@ -165,8 +163,6 @@ template<> template<>
 void to::test<2>()
 {
     Convtest t("cdfin_acars_uk");
-    // TODO: Another case of bufrx2netcdf skipping some references
-    t.ignore_list.add("^DIFFER : VARIABLE \"YXXNN\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_acars_uk\"");
     t.convert();
 }
 
@@ -178,8 +174,6 @@ void to::test<3>()
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : + <> +\n$");
     // TODO: Variable does not exist in our BUFR tables
     t.ignore_list.add("^DIFFER : NAME : VARIABLE : 011235 : VARIABLE DOESN'T EXIST IN \"tmpfile.nc\"");
-    // TODO: Another case of bufrx2netcdf skipping some references
-    t.ignore_list.add("^DIFFER : VARIABLE \"YXXNN\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_acars_us\"");
     t.convert();
 }
 
@@ -199,11 +193,6 @@ void to::test<5>()
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP <> _constant");
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP1 <> _constant");
 
-    // TODO: for some reason, the test file was encoded skipping
-    // Loop_001_maxlen, so loop variable names are out of sync
-    t.ignore_list.add("^DIFFER : LENGTHS : DIMENSION : Loop_002_maxlen : 3 <> 2");
-    t.ignore_list.add("^DIFFER : NAME : DIMENSION : Loop_003_maxlen : DIMENSION DOESN'T EXIST IN \"tmpfile.nc\"");
-
     t.convert();
 }
 
@@ -211,8 +200,6 @@ template<> template<>
 void to::test<6>()
 {
     Convtest t("cdfin_gps_zenith");
-    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_gps_zenith\"");
-
     t.convert();
 }
 
@@ -238,7 +225,6 @@ template<> template<>
 void to::test<9>()
 {
     Convtest t("cdfin_radar_vad");
-    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_radar_vad\"");
     t.convert();
 }
 
@@ -262,7 +248,6 @@ template<> template<>
 void to::test<11>()
 {
     Convtest t("cdfin_ship");
-    t.ignore_list.add("^DIFFER : NAME : DIMENSION : Loop_003_maxlen : DIMENSION DOESN'T EXIST IN \"tmpfile.nc\"");
     // TODO: In the sample data, multiple references to MGGTP look swapped
     t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference_004024 : VALUES : MGGTP2 <> MGGTP1");
     t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference2_004024 : VALUES : MGGTP1 <> MGGTP2");
@@ -276,6 +261,10 @@ template<> template<>
 void to::test<12>()
 {
     Convtest t("cdfin_synop");
+    t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference_004024 : VALUES : MGGTP3 <> MGGTP2");
+    t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference2_004024 : VALUES : MGGTP2 <> MGGTP3");
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : reference_004024 : VALUES : MGGTP5 <> MGGTP4");
+    t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : reference2_004024 : VALUES : MGGTP4 <> MGGTP5");
     t.convert();
 }
 
@@ -294,7 +283,6 @@ void to::test<14>()
     Convtest t("cdfin_tempship");
     // MDREP is constant in this case
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : dim1_length : VALUES : MDREP <> _constant");
-    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_tempship\"");
     t.convert();
 }
 
@@ -311,9 +299,6 @@ void to::test<15>()
     // means "suspect or bad"
     t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
     t.ignore_list.add("^DIFFER : VARIABLE : NDNDNQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 3");
-
-    // TODO: Another case of bufrx2netcdf skipping some references
-    t.ignore_list.add("^DIFFER : VARIABLE \"MMIOGS\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_wprof\"");
 
     t.convert();
 }
