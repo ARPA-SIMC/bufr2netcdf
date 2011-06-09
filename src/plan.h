@@ -135,6 +135,10 @@ struct Plan
 
     /// Create a new section
     plan::Section& create_section();
+    /// get a section. only used during tests. returns NULL if not found
+    const plan::Section* get_section(unsigned section) const;
+    /// get an array. only used during tests. returns NULL if not found
+    const plan::Variable* get_variable(unsigned section, unsigned pos) const;
 
     void build(const wreport::Bulletin& bulletin);
     void define(NCOutfile& outfile);

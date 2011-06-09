@@ -203,13 +203,9 @@ struct PlanMaker : opcode::Explorer
 
         auto_ptr<ValArray> make_char_array(Varcode code)
         {
-            MutableVarinfo name_info = MutableVarinfo::create_singleuse();
-            name_info->set_string(WR_VAR(2, 5, 0), "C05YYY character data", WR_VAR_Y(code));
-
-            MutableVarinfo type_info = MutableVarinfo::create_singleuse();
-            type_info->set_string(code, "C05YYY character data", WR_VAR_Y(code));
-
-            auto_ptr<ValArray> arr = make_array(Namer::DT_CHAR, name_info, type_info);
+            MutableVarinfo info = MutableVarinfo::create_singleuse();
+            info->set_string(code, "C05YYY character data", WR_VAR_Y(code));
+            auto_ptr<ValArray> arr = make_array(Namer::DT_CHAR, info, info);
             return arr;
         }
 
@@ -396,6 +392,21 @@ plan::Section& Plan::create_section()
 {
     sections.push_back(new plan::Section(sections.size()));
     return *sections.back();
+}
+
+const plan::Section* Plan::get_section(unsigned section) const
+{
+    if (section >= sections.size())
+        return NULL;
+    return sections[section];
+}
+
+const plan::Variable* Plan::get_variable(unsigned section, unsigned pos) const
+{
+    if (const plan::Section* s = get_section(section))
+        if (pos < s->entries.size())
+            return s->entries[pos];
+    return NULL;
 }
 
 void Plan::print(FILE* out) const

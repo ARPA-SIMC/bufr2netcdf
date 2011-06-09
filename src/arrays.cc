@@ -272,12 +272,7 @@ void Arrays::add(const Bulletin& bulletin)
 
 void Arrays::dump(FILE* out)
 {
-    for (std::vector<ValArray*>::const_iterator i = arrays.begin();
-            i != arrays.end(); ++i)
-    {
-        ValArray& va = **i;
-        va.dump(out);
-    }
+    plan.print(out);
 }
 
 bool Arrays::define(NCOutfile& outfile)

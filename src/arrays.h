@@ -45,9 +45,9 @@ struct NCOutfile;
 
 struct Arrays
 {
+    // Coversion strategy object that also holds the variables that are being
+    // built
     Plan plan;
-
-    std::vector<ValArray*> arrays;
 
     // Pointers used for date/time aggregations (NULL if not found)
     ValArray* date_year;

@@ -71,24 +71,49 @@ void to::test<1>()
     Arrays arrays(opts);
     read_bufr(arrays, "cdfin_acars");
 
-    ensure_equals(arrays.arrays.size(), 40u);
-    ensure_equals(arrays.arrays[0]->name, "Data_B01033_000");
-    ensure_equals(arrays.arrays[0]->get_size(), 133);
-    ensure_equals(arrays.arrays[0]->get_max_rep(), 1);
-    ensure_equals(arrays.arrays[4]->name, "Data_B05001_000");
-    ensure_equals(arrays.arrays[4]->get_size(), 133);
-    ensure_equals(arrays.arrays[4]->get_max_rep(), 1);
-    ensure_equals(arrays.arrays[39]->name, "Data_B33026_000");
-    ensure_equals(arrays.arrays[39]->get_size(), 133);
-    ensure_equals(arrays.arrays[39]->get_max_rep(), 1);
+    Plan& p = arrays.plan;
 
-    Var var = arrays.arrays[4]->get_var(0, 0);
+    ensure(p.get_section(0));
+    ensure(p.get_section(1));
+
+    ensure_equals(p.get_section(0)->entries.size(), 41);
+    ensure_equals(p.get_section(1)->entries.size(), 2);
+
+    const plan::Variable* v;
+
+    v = p.get_variable(0, 0);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B01033_000");
+    ensure_equals(v->data->get_size(), 133);
+    ensure_equals(v->data->get_max_rep(), 1);
+
+    v = p.get_variable(0, 4);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B05001_000");
+    ensure_equals(v->data->get_size(), 133);
+    ensure_equals(v->data->get_max_rep(), 1);
+    Var var = v->data->get_var(0, 0);
     ensure_equals(var.enqd(), 48.45500);
-
-    var = arrays.arrays[4]->get_var(132, 0);
+    var = v->data->get_var(132, 0);
     ensure_equals(var.enqd(), 46.16833);
 
-    //arrays.dump(stderr);
+    v = p.get_variable(0, 40);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B33026_000");
+    ensure_equals(v->data->get_size(), 133);
+    ensure_equals(v->data->get_max_rep(), 1);
+
+    v = p.get_variable(1, 0);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B11075_000");
+    ensure_equals(v->data->get_size(), 0);
+    ensure_equals(v->data->get_max_rep(), 0);
+
+    //p.print(stderr);
 }
 
 template<> template<>
@@ -98,34 +123,51 @@ void to::test<2>()
     Arrays arrays(opts);
     read_bufr(arrays, "cdfin_gps_zenith");
 
-    ensure_equals(arrays.arrays.size(), 31u);
-    ensure_equals(arrays.arrays[0]->name, "Data_B01015_000");
-    ensure_equals(arrays.arrays[0]->get_size(), 94u);
-    ensure_equals(arrays.arrays[0]->get_max_rep(), 1);
-    ensure_equals(arrays.arrays[16]->name, "Data_B02020_000");
-    ensure_equals(arrays.arrays[16]->get_size(), 94u);
-    ensure_equals(arrays.arrays[16]->get_max_rep(), 25u);
-    ensure_equals(arrays.arrays[18]->name, "Data_B05021_000");
-    ensure_equals(arrays.arrays[18]->get_size(), 94u);
-    ensure_equals(arrays.arrays[18]->get_max_rep(), 25u);
-    ensure_equals(arrays.arrays[30]->name, "Data_B15011_000");
-    ensure_equals(arrays.arrays[30]->get_size(), 94u);
-    ensure_equals(arrays.arrays[30]->get_max_rep(), 1);
+    Plan& p = arrays.plan;
 
-    Var var = arrays.arrays[16]->get_var(0, 0);
+    ensure(p.get_section(0));
+    ensure(p.get_section(1));
+
+    ensure_equals(p.get_section(0)->entries.size(), 26);
+    ensure_equals(p.get_section(1)->entries.size(), 6);
+
+    const plan::Variable* v;
+
+    v = p.get_variable(0, 0);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B01015_000");
+    ensure_equals(v->data->get_size(), 94u);
+    ensure_equals(v->data->get_max_rep(), 1);
+
+    v = p.get_variable(1, 0);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B02020_000");
+    ensure_equals(v->data->get_size(), 94u);
+    ensure_equals(v->data->get_max_rep(), 25u);
+    Var var = v->data->get_var(0, 0);
+    ensure(!var.isset());
+    var = v->data->get_var(93, 24);
+    ensure(!var.isset());
+    var = v->data->get_var(94, 25);
     ensure(!var.isset());
 
-    var = arrays.arrays[16]->get_var(93, 24);
-    ensure(!var.isset());
+    v = p.get_variable(1, 2);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B05021_000");
+    ensure_equals(v->data->get_size(), 94u);
+    ensure_equals(v->data->get_max_rep(), 25u);
 
-    var = arrays.arrays[16]->get_var(94, 25);
-    ensure(!var.isset());
+    v = p.get_variable(0, 25);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B15011_000");
+    ensure_equals(v->data->get_size(), 94u);
+    ensure_equals(v->data->get_max_rep(), 1);
 
-    var = arrays.arrays[18]->get_var(0, 0);
-    ensure(var.isset());
-    ensure_equals(var.enqi(), 0);
-
-    //arrays.dump(stderr);
+    //p.print(stderr);
 }
 
 template<> template<>
@@ -135,20 +177,41 @@ void to::test<3>()
     Arrays arrays(opts);
     read_bufr(arrays, "cdfin_buoy");
 
-    //arrays.dump(stderr);
+    Plan& p = arrays.plan;
 
-    ensure_equals(arrays.arrays.size(), 107u);
-    ensure_equals(arrays.arrays[106]->name, "Char_C05008_000");
-    ensure_equals(arrays.arrays[106]->get_size(), 13u);
-    ensure_equals(arrays.arrays[106]->get_max_rep(), 2);
+    ensure(p.get_section(0));
+    ensure(p.get_section(1));
 
-    Var var = arrays.arrays[106]->get_var(0, 0);
+    ensure_equals(p.get_section(0)->entries.size(), 106);
+    ensure_equals(p.get_section(1)->entries.size(), 3);
+    ensure_equals(p.get_section(2)->entries.size(), 3);
+    ensure_equals(p.get_section(3)->entries.size(), 1);
+    ensure_equals(p.get_section(4)->entries.size(), 1);
+
+    const plan::Variable* v;
+
+    v = p.get_variable(0, 0);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Data_B31021_000");
+    ensure_equals(v->data->get_size(), 13u);
+    ensure_equals(v->data->get_max_rep(), 1);
+
+    v = p.get_variable(4, 0);
+    ensure(v);
+    ensure(v->data);
+    ensure_equals(v->data->name, "Char_C05008_000");
+    ensure_equals(v->data->get_size(), 13u);
+    ensure_equals(v->data->get_max_rep(), 2);
+    Var var = v->data->get_var(0, 0);
     ensure(var.isset());
     ensure_equals(var.enq<std::string>(), "22219 61");
-
-    var = arrays.arrays[106]->get_var(0, 1);
+    var = v->data->get_var(0, 1);
     ensure(var.isset());
     ensure_equals(var.enq<std::string>(), "12/     ");
+
+    //p.print(stderr);
+
 }
 
 }
