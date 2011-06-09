@@ -51,6 +51,9 @@ protected:
     virtual void encode_bitmap(const Var& bitmap) {}
 
     Arrays& arrays;
+
+    std::stack<plan::Section*> cur_section;
+
     unsigned rep_nesting;
     std::vector<unsigned> rep_stack;
     map<Varcode, const ValArray*> context;
@@ -112,6 +115,11 @@ public:
         loop_var = 0;
         prev_code = 0;
         prev_code_count = 0;
+
+        // Start with a fresh section stack
+        while (!cur_section.empty()) cur_section.pop();
+        cur_section.push(arrays.plan.sections[0]);
+        cur_section.top()->cursor = 0;
     }
 
     virtual void push_repetition(unsigned length, unsigned count)
@@ -121,11 +129,19 @@ public:
             rep_stack.push_back(0u);
         ++(rep_stack[rep_nesting]);
         update_tag();
+
+        plan::Section* plan_sec = cur_section.top()->current().subsection;
+        if (!plan_sec)
+            error_consistency::throwf("out of sync at %u: value is not a subsection", cur_section.top()->cursor);
+
+        cur_section.push(plan_sec);
+        cur_section.top()->cursor = 0;
     }
 
     virtual void start_repetition()
     {
         arrays.start(tag);
+        cur_section.top()->cursor = 0;
     }
 
     virtual void pop_repetition()
@@ -133,6 +149,9 @@ public:
         --rep_nesting;
         update_tag();
         loop_var = 0;
+
+        cur_section.pop();
+        cur_section.top()->cursor++;
     }
 
     // Returns true if it found qbit info (even if undef), else false
@@ -226,6 +245,13 @@ public:
                     break;
             }
         }
+
+        ValArray* plan_var = cur_section.top()->current().data;
+        if (!plan_var && cur_section.top()->current().subsection)
+            error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
+        if (plan_var->info->var != info->var)
+            error_consistency::throwf("out of sync at %u: vars mismatch", cur_section.top()->cursor);
+        cur_section.top()->cursor++;
     }
 
     virtual void encode_char_data(Varcode code, unsigned var_pos)
@@ -244,7 +270,7 @@ public:
 
 
 Arrays::Arrays(const Options& opts)
-    : namer(Namer::get(opts).release()),
+    : plan(opts), namer(Namer::get(opts).release()),
       date_year(0), date_month(0), date_day(0),
       time_hour(0), time_minute(0), time_second(0),
       date_varid(-1), time_varid(-1),
@@ -320,6 +346,9 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
 
 void Arrays::add(const Bulletin& bulletin)
 {
+    if (plan.sections.empty())
+        plan.build(bulletin);
+
     ArrayBuilder ab(bulletin, *this, bufr_idx);
     bulletin.run_dds(ab);
 }

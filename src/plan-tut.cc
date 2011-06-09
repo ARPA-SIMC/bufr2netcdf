@@ -70,8 +70,8 @@ void to::test<1>()
     BufrBulletin bulletin;
     read_nth_bufr(bulletin, "cdfin_acars");
 
-    Plan plan;
-    plan.build(bulletin, opts);
+    Plan plan(opts);
+    plan.build(bulletin);
 
     // Check toplevel section
     const plan::Section* s = plan.sections[0];

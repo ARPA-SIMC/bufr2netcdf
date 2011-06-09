@@ -23,6 +23,7 @@
 #define B2NC_ARRAYS_H
 
 #include "namer.h"
+#include "plan.h"
 #include "valarray.h"
 #include <wreport/varinfo.h>
 #include <string>
@@ -44,6 +45,8 @@ struct NCOutfile;
 
 struct Arrays
 {
+    Plan plan;
+
     Namer* namer;
     std::vector<ValArray*> arrays;
     std::map<std::string, unsigned> byname;

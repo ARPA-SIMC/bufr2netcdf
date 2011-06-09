@@ -48,7 +48,8 @@ struct Variable
     /**
      * Data valarray for this variable.
      *
-     * Can be NULL if we are a placeholder for a replicated subsection.
+     * Can be NULL if we are a placeholder for a replicated subsection, or if
+     * this variable should be skipped.
      */
     ValArray* data;
 
@@ -64,6 +65,9 @@ struct Variable
      *
      * In that case, this is non-NULL and points to the replicated subsection
      * whose R replicator operator is found at this position.
+     *
+     * It can be that data is NULL and subsection is NULL in case this is a
+     * variable that should just be skipped.
      */
     Section* subsection;
 
@@ -89,9 +93,13 @@ struct Section
 {
     size_t id;
     std::vector<Variable*> entries;
+    unsigned cursor;
 
     Section(size_t id);
     ~Section();
+
+    // Get the variable pointed by the cursor
+    Variable& current() const;
 
     void print(FILE* out);
 private:
@@ -104,15 +112,16 @@ private:
 
 struct Plan
 {
+    const Options& opts;
     std::vector<plan::Section*> sections;
 
-    Plan();
+    Plan(const Options& opts);
     ~Plan();
 
     /// Create a new section
     plan::Section& create_section();
 
-    void build(const wreport::Bulletin& bulletin, const Options& opts);
+    void build(const wreport::Bulletin& bulletin);
 
     void print(FILE* out);
 

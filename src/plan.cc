@@ -62,12 +62,20 @@ void Variable::print(FILE* out)
 }
 
 
-Section::Section(size_t id) : id(id) {}
+Section::Section(size_t id) : id(id), cursor(0) {}
 Section::~Section()
 { 
     for (vector<Variable*>::iterator i = entries.begin();
             i != entries.end(); ++i)
         delete *i;
+}
+
+Variable& Section::current() const
+{
+    if (cursor >= entries.size())
+        error_consistency::throwf("trying to read section %zd past its end (%u/%zd)",
+                id, cursor, entries.size());
+    return *entries[cursor];
 }
 
 void Section::print(FILE* out)
@@ -180,6 +188,12 @@ struct PlanMaker : opcode::Explorer
     void b_variable(Varcode code)
     {
         Section& s = current_plan.top();
+
+        // Deal with local extensions that are not present in our tables
+        if (WR_VAR_F(code) == 0 && WR_VAR_Y(code) >= 192)
+            if (!btable->contains(code))
+                return;
+
         Varinfo info = btable->query(code);
         s.add_data(info);
     }
@@ -222,7 +236,7 @@ private:
 }
 
 
-Plan::Plan() {}
+Plan::Plan(const Options& opts) : opts(opts) {}
 
 Plan::~Plan()
 {
@@ -231,7 +245,7 @@ Plan::~Plan()
         delete *i;
 }
 
-void Plan::build(const wreport::Bulletin& bulletin, const Options& opts)
+void Plan::build(const wreport::Bulletin& bulletin)
 {
     PlanMaker pm(*this, bulletin, opts);
     bulletin.explore_datadesc(pm);
