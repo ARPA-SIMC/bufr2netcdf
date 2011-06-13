@@ -125,6 +125,20 @@ private:
 
 }
 
+/**
+ * BUFR to NetCDF Conversion stragegy
+ *
+ * The plan is built analysing the Data Description Section (DDS) of the first
+ * BUFR seen. It is assumed that a different plan is built for every different
+ * DDS.
+ *
+ * The plan structure follows the structure of the BUFR DDS as decoded by
+ * wreport, where qbits are found in variable attributes.
+ *
+ * The BUFR DDS is split into numbered sections, corresponding to replicated
+ * sequences. Section 0 contains all descriptors that are outside of
+ * replicators.
+ */
 struct Plan
 {
     const Options& opts;
