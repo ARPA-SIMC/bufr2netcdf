@@ -39,17 +39,11 @@ class ArrayBuilder : public bulletin::ConstBaseDDSExecutor
 {
 protected:
     virtual void encode_attr(Varinfo info, unsigned var_pos, Varcode attr_code) {}
-    virtual unsigned encode_repetition_count(Varinfo info)
+    virtual Var encode_semantic_var(Varinfo info)
     {
         const Var& var = get_var(current_var);
         encode_var(info);
-        return var.enqi();
-    }
-    virtual unsigned encode_associated_field_significance(Varinfo info)
-    {
-        const Var& var = get_var(current_var);
-        encode_var(info);
-        return var.enqi();
+        return var;
     }
     virtual unsigned encode_bitmap_repetition_count(Varinfo info, const Var& bitmap)
     {
