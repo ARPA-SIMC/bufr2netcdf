@@ -25,6 +25,7 @@
 #include "ncoutfile.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
+#include <wreport/bulletin/buffers.h>
 #include <netcdf.h>
 #include <stack>
 #include <cstring>
@@ -38,10 +39,16 @@ class ArrayBuilder : public bulletin::ConstBaseDDSExecutor
 {
 protected:
     virtual void encode_attr(Varinfo info, unsigned var_pos, Varcode attr_code) {}
-    virtual unsigned encode_repetition_count(Varinfo info, unsigned var_pos)
+    virtual unsigned encode_repetition_count(Varinfo info)
     {
-        encode_var(info, var_pos);
-        const Var& var = get_var(var_pos);
+        const Var& var = get_var(current_var);
+        encode_var(info);
+        return var.enqi();
+    }
+    virtual unsigned encode_associated_field_significance(Varinfo info)
+    {
+        const Var& var = get_var(current_var);
+        encode_var(info);
         return var.enqi();
     }
     virtual unsigned encode_bitmap_repetition_count(Varinfo info, const Var& bitmap)
@@ -139,9 +146,9 @@ public:
         return NULL;
     }
 
-    virtual void encode_var(Varinfo info, unsigned var_pos)
+    virtual void encode_var(Varinfo info)
     {
-        const Var& var = get_var(var_pos);
+        const Var& var = get_var();
         plan::Variable& v = cur_section.top()->current();
         if (v.subsection)
             error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
@@ -168,9 +175,9 @@ public:
         cur_section.top()->cursor++;
     }
 
-    virtual void encode_char_data(Varcode code, unsigned var_pos)
+    virtual void encode_char_data(Varcode code)
     {
-        const Var& var = get_var(var_pos);
+        const Var& var = get_var();
         plan::Variable& v = cur_section.top()->current();
         if (v.subsection)
             error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
@@ -416,7 +423,8 @@ void Sections::add(const wreport::BufrBulletin& bulletin)
 
     if (len > max_length)
         max_length = len;
-    values.push_back(string((const char*)bulletin.raw_details->sec[idx], len));
+    const char* buf = (const char*)bulletin.raw_details->data + bulletin.raw_details->sec[idx];
+    values.push_back(string(buf, len));
 }
 
 bool Sections::define(NCOutfile& outfile)

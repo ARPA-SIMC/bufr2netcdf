@@ -322,24 +322,21 @@ struct PlanMaker : opcode::Explorer
         s.add_data(info);
     }
 
-    void c_modifier(Varcode code)
+    void c_associated_field(Varcode code, Varcode sig_code, unsigned nbits)
     {
-        switch (WR_VAR_X(code))
-        {
-            case 4:
-                // Toggle has_qbits flag
-                current_plan.top().has_qbits = WR_VAR_Y(code) != 0;
-                break;
-            case 5: {
-                // TODO: current plan.push_back(ValArray(code))
-                Section& s = current_plan.top();
-                s.add_char(code);
-                break;
-            }
-        }
+        // Toggle has_qbits flag
+        current_plan.top().has_qbits = WR_VAR_Y(code) != 0;
+        if (sig_code)
+            b_variable(sig_code);
     }
 
-    void r_replication_begin(Varcode code, Varcode delayed_code)
+    void c_char_data(Varcode code)
+    {
+        Section& s = current_plan.top();
+        s.add_char(code);
+    }
+
+    void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops)
     {
         plan::Section& ns = plan.create_section();
         ns.loop.index = loop_index++;
@@ -357,10 +354,9 @@ struct PlanMaker : opcode::Explorer
         // Init subplan context with a fork of the parent context
         current_plan.top().context = s.context;
         current_plan.top().has_qbits = s.has_qbits;
-    }
 
-    void r_replication_end(Varcode code)
-    {
+        ops.explore(*this);
+
         current_plan.pop();
     }
 
