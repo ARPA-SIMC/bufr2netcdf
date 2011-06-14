@@ -61,8 +61,8 @@ void to::test<1>()
     ensure(val);
     ensure_equals(string(val), "MHFFST");
 
-    // YSUPL is hardcoded for all C08000
-    val = t->find(WR_VAR(2, 8, 0));
+    // YSUPL is hardcoded for all C05000
+    val = t->find(WR_VAR(2, 5, 0));
     ensure(val);
     ensure_equals(string(val), "YSUPL");
 }
