@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(bufr2netcdf, 0.1, [enrico@enricozini.org])
+AC_INIT(bufr2netcdf, 0.9, [enrico@enricozini.org])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_CONFIG_HEADER(config.h)
@@ -39,6 +39,10 @@ PKG_CHECK_MODULES(WREPORT, [libwreport >= 1.7])
 
 dnl Check for NetCDF
 PKG_CHECK_MODULES(NC, [netcdf])
+
+dnl Target directory for DWD mnemonic table data
+tabledir='${datadir}'"/$PACKAGE"
+AC_SUBST(tabledir)
 
 LIBS="$LIBS -lm"
 
