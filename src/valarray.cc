@@ -41,10 +41,10 @@ template<> inline float nc_fill() { return NC_FILL_FLOAT; }
 template<> inline std::string nc_fill() { return string(); }
 
 template<typename TYPE>
-static inline int nc_type() { throw error_consistency("requested type const value for unknown type"); }
-template<> inline int nc_type<int>() { return NC_INT; }
-template<> inline int nc_type<float>() { return NC_FLOAT; }
-template<> inline int nc_type<std::string>() { return NC_CHAR; }
+static inline nc_type get_nc_type() { throw error_consistency("requested type const value for unknown type"); }
+template<> inline nc_type get_nc_type<int>() { return NC_INT; }
+template<> inline nc_type get_nc_type<float>() { return NC_FLOAT; }
+template<> inline nc_type get_nc_type<std::string>() { return NC_CHAR; }
 
 void LoopInfo::define(NCOutfile& outfile, size_t size)
 {
@@ -246,7 +246,7 @@ struct SingleNumberArray : public SingleValArray<TYPE>
             return false;
         }
 
-        this->nc_varid = outfile.def_var(this->name.c_str(), nc_type<TYPE>(), 1, &bufrdim);
+        this->nc_varid = outfile.def_var(this->name.c_str(), get_nc_type<TYPE>(), 1, &bufrdim);
 
         this->add_common_attributes(outfile.ncid);
 
@@ -445,7 +445,7 @@ struct MultiNumberValArray : public MultiValArray<TYPE>
         int ncid = outfile.ncid;
 
         int dims[] = { outfile.dim_bufr_records, this->loopinfo.nc_dimid };
-        this->nc_varid = outfile.def_var(this->name.c_str(), nc_type<TYPE>(), 2, dims);
+        this->nc_varid = outfile.def_var(this->name.c_str(), get_nc_type<TYPE>(), 2, dims);
 
         this->add_common_attributes(ncid);
 
