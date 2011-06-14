@@ -143,6 +143,9 @@ public:
     virtual void encode_var(Varinfo info)
     {
         const Var& var = get_var();
+        if (WR_VAR_F(var.code()) == 2 && WR_VAR_X(var.code()) == 6)
+            // Skip unknown local descriptors
+            return;
         plan::Variable& v = cur_section.top()->current();
         if (v.subsection)
             error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);

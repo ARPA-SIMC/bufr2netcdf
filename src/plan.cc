@@ -336,6 +336,16 @@ struct PlanMaker : opcode::Explorer
         s.add_char(code);
     }
 
+    void c_local_descriptor(Varcode code, Varcode desc_code, unsigned nbits)
+    {
+        if (btable->contains(desc_code))
+        {
+            Varinfo info = btable->query(desc_code);
+            if (info->bit_len == WR_VAR_Y(code))
+                b_variable(desc_code);
+        }
+    }
+
     void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops)
     {
         plan::Section& ns = plan.create_section();
