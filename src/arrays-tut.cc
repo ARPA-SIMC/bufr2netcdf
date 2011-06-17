@@ -52,13 +52,13 @@ static void read_bufr(Arrays& a, const std::string& testname)
         error_system::throwf("cannot open %s", srcfile.c_str());
 
     string rawmsg;
-    BufrBulletin bulletin;
+    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
     while (BufrBulletin::read(infd, rawmsg, srcfile.c_str()))
     {
         // Decode the BUFR message
-        bulletin.decode(rawmsg);
+        bulletin->decode(rawmsg);
         // Add contents to the various data arrays
-        a.add(bulletin);
+        a.add(*bulletin);
     }
 
     fclose(infd);

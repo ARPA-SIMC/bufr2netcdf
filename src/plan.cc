@@ -80,6 +80,14 @@ Variable& Section::current() const
     return *entries[cursor];
 }
 
+Variable& Section::current(unsigned idx) const
+{
+    if (cursor + idx >= entries.size())
+        error_consistency::throwf("trying to read section %zd past its end (%u/%zd)",
+                id, cursor + idx, entries.size());
+    return *entries[cursor + idx];
+}
+
 void Section::define(NCOutfile& outfile)
 {
     for (vector<plan::Variable*>::iterator i = entries.begin();
@@ -111,6 +119,16 @@ void Section::print(FILE* out) const
     }
 }
 
+void Section::print(FILE* out, unsigned first, unsigned count) const
+{
+    if (count == 0) count = entries.size();
+    for (size_t i = first; i < entries.size() && i < first + count; ++i)
+    {
+        fprintf(stderr, "%zd: ", i);
+        entries[i]->print(out);
+    }
+}
+
 }
 
 namespace {
@@ -136,7 +154,7 @@ struct ValueOverride
     }
 };
 
-struct PlanMaker : opcode::Explorer
+struct PlanMaker : opcode::Visitor
 {
     struct Section
     {
@@ -365,7 +383,7 @@ struct PlanMaker : opcode::Explorer
         current_plan.top().context = s.context;
         current_plan.top().has_qbits = s.has_qbits;
 
-        ops.explore(*this);
+        ops.visit(*this);
 
         current_plan.pop();
     }
@@ -391,7 +409,7 @@ Plan::~Plan()
 void Plan::build(const wreport::Bulletin& bulletin)
 {
     PlanMaker pm(*this, bulletin, opts);
-    bulletin.explore_datadesc(pm);
+    bulletin.visit_datadesc(pm);
 }
 
 plan::Section& Plan::create_section()

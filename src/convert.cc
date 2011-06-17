@@ -55,18 +55,18 @@ void read_bufr(const std::string& fname, BufrSink& out)
 void read_bufr(FILE* in, BufrSink& out, const char* fname)
 {
     string rawmsg;
-    BufrCodecOptions codec_opts;
-    BufrBulletin bulletin;
+    auto_ptr<BufrCodecOptions> codec_opts(BufrCodecOptions::create());
+    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
 
-    codec_opts.decode_adds_undef_attrs = true;
-    bulletin.codec_options = &codec_opts;
+    codec_opts->decode_adds_undef_attrs = true;
+    bulletin->codec_options = codec_opts.get();
 
     while (BufrBulletin::read(in, rawmsg, fname))
     {
         // Decode the BUFR message
-        bulletin.decode(rawmsg);
+        bulletin->decode(rawmsg);
 
-        out.add_bufr(bulletin);
+        out.add_bufr(*bulletin);
     }
 }
 

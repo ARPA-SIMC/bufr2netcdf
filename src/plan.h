@@ -112,10 +112,13 @@ struct Section
 
     // Get the variable pointed by the cursor
     Variable& current() const;
+    // Get the idx-th variable after the cursor
+    Variable& current(unsigned idx) const;
 
     void define(NCOutfile& outfile);
     void putvar(NCOutfile& outfile) const;
     void print(FILE* out) const;
+    void print(FILE* out, unsigned first, unsigned count=0) const;
 
 private:
     // Forbid copy

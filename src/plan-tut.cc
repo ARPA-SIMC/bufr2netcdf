@@ -67,11 +67,11 @@ void to::test<1>()
 {
     Options opts;
 
-    BufrBulletin bulletin;
-    read_nth_bufr(bulletin, "cdfin_acars");
+    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
+    read_nth_bufr(*bulletin, "cdfin_acars");
 
     Plan plan(opts);
-    plan.build(bulletin);
+    plan.build(*bulletin);
 
     // Check toplevel section
     const plan::Section* s = plan.sections[0];

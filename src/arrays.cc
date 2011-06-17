@@ -26,6 +26,7 @@
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
 #include <wreport/bulletin/buffers.h>
+#include <wreport/bulletin/internals.h>
 #include <netcdf.h>
 #include <stack>
 #include <cstring>
@@ -35,28 +36,22 @@ using namespace std;
 
 namespace b2nc {
 
-class ArrayBuilder : public bulletin::ConstBaseDDSExecutor
+class ArrayBuilder : public bulletin::ConstBaseVisitor
 {
 protected:
-    virtual void encode_attr(Varinfo info, unsigned var_pos, Varcode attr_code) {}
-    virtual Var encode_semantic_var(Varinfo info)
+    virtual void do_attr(Varinfo info, unsigned var_pos, Varcode attr_code) {}
+    virtual void do_associated_field(unsigned bit_count, unsigned significance) {}
+    virtual const Var& do_semantic_var(Varinfo info)
     {
         const Var& var = get_var(current_var);
-        encode_var(info);
+        do_var(info);
         return var;
     }
-    virtual unsigned encode_bitmap_repetition_count(Varinfo info, const Var& bitmap)
-    {
-        return bitmap.info()->len;
-    }
-    virtual void encode_bitmap(const Var& bitmap) {}
 
     Arrays& arrays;
 
     std::stack<plan::Section*> cur_section;
 
-    unsigned rep_nesting;
-    std::vector<unsigned> rep_stack;
     map<Varcode, const ValArray*> context;
     int& bufr_idx;
 
@@ -74,20 +69,16 @@ protected:
 
 public:
     ArrayBuilder(const Bulletin& bulletin, Arrays& arrays, int& bufr_idx)
-        : bulletin::ConstBaseDDSExecutor(bulletin),
+        : bulletin::ConstBaseVisitor(bulletin),
           arrays(arrays),
-          rep_nesting(0),
           bufr_idx(bufr_idx),
           prev_code(0), prev_code_count(0)
     {
     }
 
-    virtual void start_subset(unsigned subset_no)
+    virtual void do_start_subset(unsigned subset_no, const Subset& current_subset)
     {
-        bulletin::ConstBaseDDSExecutor::start_subset(subset_no);
-        if (rep_nesting != 0)
-            error_consistency::throwf("At start of subset, rep_nesting is %u instead of 0", rep_nesting);
-        rep_stack.clear();
+        bulletin::ConstBaseVisitor::do_start_subset(subset_no, current_subset);
         context.clear();
         ++bufr_idx;
         prev_code = 0;
@@ -99,32 +90,31 @@ public:
         cur_section.top()->cursor = 0;
     }
 
-    virtual void push_repetition(unsigned length, unsigned count)
+    virtual void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops)
     {
-        ++rep_nesting;
-        while (rep_nesting >= rep_stack.size())
-            rep_stack.push_back(0u);
-        ++(rep_stack[rep_nesting]);
+        plan::Section* cur_top = cur_section.top();
 
-        plan::Section* plan_sec = cur_section.top()->current().subsection;
-        if (!plan_sec)
-            error_consistency::throwf("out of sync at %u: value is not a subsection", cur_section.top()->cursor);
+        bulletin::ConstBaseVisitor::r_replication(code, delayed_code, ops);
 
-        cur_section.push(plan_sec);
-        cur_section.top()->cursor = 0;
-    }
+        if (cur_top != cur_section.top())
+            // If it iterated, we need to pop the subsection from the stack
+            cur_section.pop();
 
-    virtual void start_repetition()
-    {
-        cur_section.top()->cursor = 0;
-    }
-
-    virtual void pop_repetition()
-    {
-        --rep_nesting;
-
-        cur_section.pop();
+        // Skip past the subsetction
         cur_section.top()->cursor++;
+    }
+
+    virtual void do_start_repetition(unsigned idx)
+    {
+        if (idx == 0)
+        {
+            plan::Section* plan_sec = cur_section.top()->current().subsection;
+            if (!plan_sec)
+                error_consistency::throwf("out of sync at %u: value is not a subsection", cur_section.top()->cursor);
+
+            cur_section.push(plan_sec);
+        }
+        cur_section.top()->cursor = 0;
     }
 
     // Returns the qbit attribute for this variable, or NULL if none is found
@@ -140,7 +130,7 @@ public:
         return NULL;
     }
 
-    virtual void encode_var(Varinfo info)
+    virtual void do_var(Varinfo info)
     {
         const Var& var = get_var();
         if (WR_VAR_F(var.code()) == 2 && WR_VAR_X(var.code()) == 6)
@@ -152,7 +142,10 @@ public:
         if (v.data)
         {
             if (v.data->info->var != info->var)
-                error_consistency::throwf("out of sync at %u: vars mismatch", cur_section.top()->cursor);
+                error_consistency::throwf("out of sync at %u: vars mismatch (%d%02d%03d != %d%02d%03d)",
+                        cur_section.top()->cursor,
+                        WR_VAR_F(v.data->info->var), WR_VAR_X(v.data->info->var), WR_VAR_Y(v.data->info->var),
+                        WR_VAR_F(info->var), WR_VAR_X(info->var), WR_VAR_Y(info->var));
             v.data->add(var, bufr_idx);
 
             // Take note of significant ValArrays
@@ -172,7 +165,7 @@ public:
         cur_section.top()->cursor++;
     }
 
-    virtual void encode_char_data(Varcode code)
+    virtual void do_char_data(Varcode code)
     {
         const Var& var = get_var();
         plan::Variable& v = cur_section.top()->current();
@@ -271,7 +264,7 @@ void Arrays::add(const Bulletin& bulletin)
         plan.build(bulletin);
 
     ArrayBuilder ab(bulletin, *this, bufr_idx);
-    bulletin.run_dds(ab);
+    bulletin.visit(ab);
 }
 
 void Arrays::dump(FILE* out)
