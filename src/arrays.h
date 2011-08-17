@@ -62,6 +62,9 @@ struct Arrays
 
     int bufr_idx;
 
+    bool verbose;
+    bool debug;
+
     Arrays(const Options& opts);
     ~Arrays();
 

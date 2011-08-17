@@ -31,11 +31,13 @@ namespace b2nc {
  */
 struct Options
 {
+    bool verbose;
+    bool debug;
     bool use_mnemonic;
     std::string out_fname;
 
     Options()
-        : use_mnemonic(true)
+        : verbose(false), debug(false), use_mnemonic(true)
     {
     }
 };

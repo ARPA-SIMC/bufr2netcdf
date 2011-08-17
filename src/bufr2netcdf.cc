@@ -19,6 +19,7 @@ void usage(FILE* out)
     fprintf(out, "Options:\n");
     fprintf(out, "  -h, --help                  this help message.\n");
     fprintf(out, "  -v, --verbose               verbose output.\n");
+    fprintf(out, "  --debug                     debug output.\n");
     fprintf(out, "  -o PFX, --outfile=PFX       prefix to use for output files.\n");
     fprintf(out, "  -n                          generate variable names in the form\n");
     fprintf(out, "                              Type_FXXYYY_RRR instead of using a mnemonic.\n");
@@ -32,10 +33,10 @@ int main(int argc, char* argv[])
         {"help",    no_argument,       NULL, 'h'},
         {"outfile", required_argument, NULL, 'o'},
         {"verbose", no_argument,       NULL, 'v'},
+        {"debug",   no_argument,         NULL, 1},
         {0, 0, 0, 0}
     };
 
-    bool verbose = false;
     Options options;
 
     while (1)
@@ -61,8 +62,11 @@ int main(int argc, char* argv[])
             case 'n':
                 options.use_mnemonic = false;
                 break;
+            case 1:
+                options.debug = true;
+                // debug includes verbose, so fall through into it
             case 'v':
-                verbose = true;
+                options.verbose = true;
                 break;
             default:
                 error_consistency::throwf("unknown option character %c (%d)", c, c);
@@ -87,7 +91,7 @@ int main(int argc, char* argv[])
 
         while (optind < argc)
         {
-            if (verbose) fprintf(stderr, "Reading from %s\n", argv[optind]);
+            if (options.verbose) fprintf(stderr, "Reading from %s\n", argv[optind]);
             read_bufr(argv[optind++], dispatcher);
         }
 

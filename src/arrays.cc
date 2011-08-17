@@ -23,6 +23,7 @@
 #include "utils.h"
 #include "mnemo.h"
 #include "ncoutfile.h"
+#include "options.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
 #include <wreport/bulletin/buffers.h>
@@ -138,7 +139,14 @@ public:
             return;
         plan::Variable& v = cur_section.top()->current();
         if (v.subsection)
+        {
+            if (arrays.verbose)
+            {
+                fprintf(stderr, "Trying to match "); var.print(stderr);
+                fprintf(stderr, " with "); v.print(stderr);
+            }
             error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
+        }
         if (v.data)
         {
             if (v.data->info->var != info->var)
@@ -192,7 +200,7 @@ Arrays::Arrays(const Options& opts)
       date_year(0), date_month(0), date_day(0),
       time_hour(0), time_minute(0), time_second(0),
       date_varid(-1), time_varid(-1),
-      bufr_idx(-1)
+      bufr_idx(-1), verbose(opts.verbose), debug(opts.debug)
 {
 }
 
@@ -261,7 +269,14 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
 void Arrays::add(const Bulletin& bulletin)
 {
     if (plan.sections.empty())
+    {
         plan.build(bulletin);
+        if (debug)
+        {
+            fprintf(stderr, "Computed conversion plan:\n");
+            plan.print(stderr);
+        }
+    }
 
     ArrayBuilder ab(bulletin, *this, bufr_idx);
     bulletin.visit(ab);
