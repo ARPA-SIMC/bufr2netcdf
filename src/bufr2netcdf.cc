@@ -9,11 +9,25 @@ using namespace b2nc;
 using namespace wreport;
 using namespace std;
 
+void usage(FILE* out)
+{
+    fprintf(out, "Usage: bufr2netcdf [options] file[s]\n");
+    fprintf(out, "Convert BUFR files to NetCDF according to COSMO conventions\n");
+    fprintf(out, "For each input file it generates one or more output files,\n");
+    fprintf(out, " one for each different BUFR type encountered.\n");
+    fprintf(out, "\n");
+    fprintf(out, "Options:\n");
+    fprintf(out, "  -h, --help                  this help message.\n");
+    fprintf(out, "  -v, --verbose               verbose output.\n");
+    fprintf(out, "  -o PFX, --outfile=PFX       prefix to use for output files.\n");
+}
+
 int main(int argc, char* argv[])
 {
     static struct option long_options[] =
     {
         /* These options set a flag. */
+        {"help",    no_argument,       NULL, 'h'},
         {"outfile", required_argument, NULL, 'o'},
         {"verbose", no_argument,       NULL, 'v'},
         {0, 0, 0, 0}
@@ -27,7 +41,7 @@ int main(int argc, char* argv[])
         /* `getopt_long' stores the option index here. */
         int option_index = 0;
 
-        int c = getopt_long(argc, argv, "o:v",
+        int c = getopt_long(argc, argv, "o:vh",
                 long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -36,6 +50,9 @@ int main(int argc, char* argv[])
 
         switch (c)
         {
+            case 'h':
+                usage(stdout);
+                return 0;
             case 'o':
                 options.out_fname = optarg;
                 break;
