@@ -101,8 +101,9 @@ public:
             // If it iterated, we need to pop the subsection from the stack
             cur_section.pop();
 
-        // Skip past the subsetction
-        cur_section.top()->cursor++;
+        // Skip past the subsection
+        if (cur_section.top()->current().subsection)
+            cur_section.top()->cursor++;
     }
 
     virtual void do_start_repetition(unsigned idx)

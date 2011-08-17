@@ -311,12 +311,16 @@ struct PlanMaker : opcode::Visitor
     // Varinfo describing qbits variables
     MutableVarinfo qbits_info;
 
+    bool expect_bitmap;
+
+
     PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
         : plan(plan),
           btable(b.btable),
           namer(Namer::get(opts).release()),
           loop_index(0),
-          qbits_info(MutableVarinfo::create_singleuse())
+          qbits_info(MutableVarinfo::create_singleuse()),
+          expect_bitmap(false)
     {
         qbits_info->set(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 0, 0, 10, 0, 32);
         current_plan.push(Section(*this, plan.create_section()));
@@ -339,6 +343,10 @@ struct PlanMaker : opcode::Visitor
         Varinfo info = btable->query(code);
         s.add_data(info);
     }
+
+    void c_quality_information_bitmap(Varcode code) { expect_bitmap = true; }
+
+    void c_substituted_value_bitmap(Varcode code) { expect_bitmap = true; }
 
     void c_associated_field(Varcode code, Varcode sig_code, unsigned nbits)
     {
@@ -366,6 +374,13 @@ struct PlanMaker : opcode::Visitor
 
     void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops)
     {
+        if (expect_bitmap)
+        {
+            // Skip the section if it's just defining a bitmap
+            expect_bitmap = false;
+            return;
+        }
+
         plan::Section& ns = plan.create_section();
         ns.loop.index = loop_index++;
 
