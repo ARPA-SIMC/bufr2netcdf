@@ -20,6 +20,8 @@ void usage(FILE* out)
     fprintf(out, "  -h, --help                  this help message.\n");
     fprintf(out, "  -v, --verbose               verbose output.\n");
     fprintf(out, "  -o PFX, --outfile=PFX       prefix to use for output files.\n");
+    fprintf(out, "  -n                          generate variable names in the form\n");
+    fprintf(out, "                              Type_FXXYYY_RRR instead of using a mnemonic.\n");
 }
 
 int main(int argc, char* argv[])
@@ -41,7 +43,7 @@ int main(int argc, char* argv[])
         /* `getopt_long' stores the option index here. */
         int option_index = 0;
 
-        int c = getopt_long(argc, argv, "o:vh",
+        int c = getopt_long(argc, argv, "o:vhn",
                 long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -55,6 +57,9 @@ int main(int argc, char* argv[])
                 return 0;
             case 'o':
                 options.out_fname = optarg;
+                break;
+            case 'n':
+                options.use_mnemonic = false;
                 break;
             case 'v':
                 verbose = true;
