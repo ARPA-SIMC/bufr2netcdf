@@ -342,6 +342,12 @@ struct PlanMaker : opcode::Visitor
 
         Varinfo info = btable->query(code);
         s.add_data(info);
+
+        if (plan.opts.debug)
+        {
+            fprintf(stderr, "%d%02d%03d: add variable ", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+            current_plan.top().section.entries.back()->print(stderr);
+        }
     }
 
     void c_quality_information_bitmap(Varcode code) { expect_bitmap = true; }
@@ -354,12 +360,25 @@ struct PlanMaker : opcode::Visitor
         current_plan.top().has_qbits = WR_VAR_Y(code) != 0;
         if (sig_code)
             b_variable(sig_code);
+
+        if (plan.opts.debug)
+        {
+            if (sig_code)
+                fprintf(stderr, "%d%02d%03d: add significance variable %d\n", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code), sig_code);
+            else
+                fprintf(stderr, "%d%02d%03d: exit scope of associated field\n", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+        }
     }
 
     void c_char_data(Varcode code)
     {
         Section& s = current_plan.top();
         s.add_char(code);
+
+        if (plan.opts.debug)
+        {
+            fprintf(stderr, "%d%02d%03d: add character data variable\n", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+        }
     }
 
     void c_local_descriptor(Varcode code, Varcode desc_code, unsigned nbits)
@@ -369,6 +388,13 @@ struct PlanMaker : opcode::Visitor
             Varinfo info = btable->query(desc_code);
             if (info->bit_len == WR_VAR_Y(code))
                 b_variable(desc_code);
+        }
+
+        if (plan.opts.debug)
+        {
+            fprintf(stderr, "%d%02d%03d: add possibly unsupported variable %d%02d%03d\n",
+                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code),
+                    WR_VAR_F(desc_code), WR_VAR_X(desc_code), WR_VAR_Y(desc_code));
         }
     }
 
@@ -386,6 +412,13 @@ struct PlanMaker : opcode::Visitor
 
         if (delayed_code)
         {
+            if (plan.opts.debug)
+            {
+                fprintf(stderr, "%d%02d%03d: add replication variable %d%02d%03d\n",
+                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code),
+                    WR_VAR_F(delayed_code), WR_VAR_X(delayed_code), WR_VAR_Y(delayed_code));
+            }
+
             b_variable(delayed_code);
             ns.loop.var = current_plan.top().section.entries.back()->data;
         }
@@ -394,11 +427,23 @@ struct PlanMaker : opcode::Visitor
         current_plan.push(Section(*this, ns));
         s.add_subplan(ns);
 
+        if (plan.opts.debug)
+        {
+            fprintf(stderr, "%d%02d%03d: add section\n",
+                WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+        }
+
         // Init subplan context with a fork of the parent context
         current_plan.top().context = s.context;
         current_plan.top().has_qbits = s.has_qbits;
 
         ops.visit(*this);
+
+        if (plan.opts.debug)
+        {
+            fprintf(stderr, "%d%02d%03d: end of section\n",
+                WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+        }
 
         current_plan.pop();
     }

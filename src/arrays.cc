@@ -68,6 +68,55 @@ protected:
     // Number of times in a row the previous varcode appeared
     unsigned prev_code_count;
 
+    plan::Variable& variable_for(Varcode code)
+    {
+        plan::Variable& v = cur_section.top()->current();
+        if (v.subsection)
+        {
+            if (arrays.verbose)
+            {
+                fprintf(stderr, "Trying to match %01d%02d%03d with ",
+                        WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+                v.print(stderr);
+            }
+            error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
+        } else {
+            if (arrays.debug)
+            {
+                fprintf(stderr, "Matched %01d%02d%03d with ",
+                        WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+                v.print(stderr);
+            }
+        }
+        if (v.data && v.data->info->var != code)
+            error_consistency::throwf("out of sync at %u: vars mismatch (%d%02d%03d != %d%02d%03d)",
+                    cur_section.top()->cursor,
+                    WR_VAR_F(v.data->info->var), WR_VAR_X(v.data->info->var), WR_VAR_Y(v.data->info->var),
+                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+        return v;
+    }
+
+    plan::Section* section_for_current_position()
+    {
+        plan::Section* plan_sec = cur_section.top()->current().subsection;
+        if (!plan_sec)
+        {
+            if (arrays.verbose)
+            {
+                fprintf(stderr, "Looking for section, got ");
+                cur_section.top()->current().print(stderr);
+            }
+            error_consistency::throwf("out of sync at %u: value is not a subsection", cur_section.top()->cursor);
+        } else {
+            if (arrays.debug)
+            {
+                fprintf(stderr, "Looking for section, got ");
+                cur_section.top()->current().print(stderr);
+            }
+        }
+        return plan_sec;
+    }
+
 public:
     ArrayBuilder(const Bulletin& bulletin, Arrays& arrays, int& bufr_idx)
         : bulletin::ConstBaseVisitor(bulletin),
@@ -93,6 +142,11 @@ public:
 
     virtual void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops)
     {
+        if (arrays.debug)
+            fprintf(stderr, "Begin replicated section %01d%02d%03d/%01d%02d%03d\n",
+                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code),
+                    WR_VAR_F(delayed_code), WR_VAR_X(delayed_code), WR_VAR_Y(delayed_code));
+
         plan::Section* cur_top = cur_section.top();
 
         bulletin::ConstBaseVisitor::r_replication(code, delayed_code, ops);
@@ -104,19 +158,28 @@ public:
         // Skip past the subsection
         if (cur_section.top()->current().subsection)
             cur_section.top()->cursor++;
+
+        if (arrays.debug)
+        {
+            plan::Variable& v = cur_section.top()->current();
+            fprintf(stderr, "End replicated section %01d%02d%03d/%01d%02d%03d; next: ",
+                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code),
+                    WR_VAR_F(delayed_code), WR_VAR_X(delayed_code), WR_VAR_Y(delayed_code));
+            v.print(stderr);
+        }
     }
 
     virtual void do_start_repetition(unsigned idx)
     {
         if (idx == 0)
         {
-            plan::Section* plan_sec = cur_section.top()->current().subsection;
-            if (!plan_sec)
-                error_consistency::throwf("out of sync at %u: value is not a subsection", cur_section.top()->cursor);
-
+            plan::Section* plan_sec = section_for_current_position();
             cur_section.push(plan_sec);
         }
         cur_section.top()->cursor = 0;
+
+        if (arrays.debug)
+            fprintf(stderr, "Repetition #%u\n", idx);
     }
 
     // Returns the qbit attribute for this variable, or NULL if none is found
@@ -132,29 +195,44 @@ public:
         return NULL;
     }
 
+    /*
+    virtual const Var& do_bitmap(Varcode code, Varcode rep_code, Varcode delayed_code, const Opcodes& ops)
+    {
+        const Var& res = bulletin::ConstBaseVisitor::do_bitmap(code, rep_code, delayed_code, ops);
+
+        // Store the delayed replication factor, if any
+        if (delayed_code != 0)
+        {
+            plan::Variable& v = variable_for(delayed_code);
+            if (v.data)
+            {
+                Var var(btable->query(delayed_code), (int)res.info()->len);
+                v.data->add(var, bufr_idx);
+            }
+        }
+
+        // Store the bitmap itself
+
+        // Fetch the section
+        plan::Section* plan_sec = section_for_current_position();
+        cur_section.push(plan_sec);
+        cur_section.top()->cursor = 0;
+
+        // TODO:   feed it bits
+
+        return res;
+    }
+    */
+
     virtual void do_var(Varinfo info)
     {
         const Var& var = get_var();
         if (WR_VAR_F(var.code()) == 2 && WR_VAR_X(var.code()) == 6)
             // Skip unknown local descriptors
             return;
-        plan::Variable& v = cur_section.top()->current();
-        if (v.subsection)
-        {
-            if (arrays.verbose)
-            {
-                fprintf(stderr, "Trying to match "); var.print(stderr);
-                fprintf(stderr, " with "); v.print(stderr);
-            }
-            error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
-        }
+        plan::Variable& v = variable_for(info->var);
         if (v.data)
         {
-            if (v.data->info->var != info->var)
-                error_consistency::throwf("out of sync at %u: vars mismatch (%d%02d%03d != %d%02d%03d)",
-                        cur_section.top()->cursor,
-                        WR_VAR_F(v.data->info->var), WR_VAR_X(v.data->info->var), WR_VAR_Y(v.data->info->var),
-                        WR_VAR_F(info->var), WR_VAR_X(info->var), WR_VAR_Y(info->var));
             v.data->add(var, bufr_idx);
 
             // Take note of significant ValArrays
@@ -271,10 +349,12 @@ void Arrays::add(const Bulletin& bulletin)
 {
     if (plan.sections.empty())
     {
+        if (debug)
+            fprintf(stderr, "\nBuilding conversion plan:\n");
         plan.build(bulletin);
         if (debug)
         {
-            fprintf(stderr, "Computed conversion plan:\n");
+            fprintf(stderr, "\nComputed conversion plan:\n");
             plan.print(stderr);
         }
     }
