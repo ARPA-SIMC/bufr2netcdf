@@ -109,7 +109,7 @@ struct Convtest
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : DB <> dB");
     }
 
-    void convert()
+    void make_netcdf()
     {
         // Create output file
         Options options;
@@ -121,6 +121,11 @@ struct Convtest
 
         // Flush output
         outfile->close();
+    }
+
+    void convert()
+    {
+        make_netcdf();
 
         // Compare results
         const char* nccmp = getenv("B2NC_NCCMP");
@@ -302,6 +307,13 @@ void to::test<15>()
     t.ignore_list.add("^DIFFER : VARIABLE : NDNDNQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
 
     t.convert();
+}
+
+template<> template<>
+void to::test<16>()
+{
+    Convtest t("bug_temp");
+    t.make_netcdf();
 }
 
 }
