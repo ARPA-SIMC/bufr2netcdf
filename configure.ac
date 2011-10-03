@@ -38,7 +38,12 @@ dnl Check for wreport
 PKG_CHECK_MODULES(WREPORT, [libwreport >= 2.0])
 
 dnl Check for NetCDF
-PKG_CHECK_MODULES(NC, [netcdf])
+dnl pkg-config has conflicting cflags across distros, requiring includes in the
+dnl form of netcdf/foo.h in Debian or just foo.h in Fedora
+dnl PKG_CHECK_MODULES(NETCDF, [netcdf])
+AC_CHECK_NETCDF()
+AC_SUBST(NETCDF_CFLAGS)
+AC_SUBST(NETCDF_LIBS)
 
 dnl Target directory for DWD mnemonic table data
 tabledir='${datadir}'"/$PACKAGE"

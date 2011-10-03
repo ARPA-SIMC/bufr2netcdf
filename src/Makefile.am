@@ -6,7 +6,7 @@ CFLAGS += -Wall -Werror
 CXXFLAGS += -Wall -Werror
 
 
-INCLUDES = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NC_CFLAGS)
+INCLUDES = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NETCDF_CFLAGS)
 
 #
 # Convenience library with conversion code
@@ -23,7 +23,7 @@ libb2nc_la_SOURCES = utils.cc mnemo.cc namer.cc valarray.cc plan.cc arrays.cc nc
 
 bin_PROGRAMS = bufr2netcdf
 bufr2netcdf_SOURCES = bufr2netcdf.cc
-bufr2netcdf_LDADD = libb2nc.la $(NC_LIBS) $(WREPORT_LIBS)
+bufr2netcdf_LDADD = libb2nc.la $(NETCDF_LIBS) $(WREPORT_LIBS)
 
 #
 # Unit testing
@@ -55,7 +55,7 @@ tut_test_SOURCES = \
 	tests/tut-main.cpp
 tut_test_LDADD = \
 	libb2nc.la \
-	$(NC_LIBS) \
+	$(NETCDF_LIBS) \
 	$(WREPORT_LIBS) \
 	$(WIBBLE_LIBS)
 

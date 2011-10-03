@@ -6,7 +6,7 @@ if DO_TESTS
 # nccmp comparison program
 #
 
-INCLUDES = $(NC_CFLAGS)
+INCLUDES = $(NETCDF_CFLAGS)
 
 noinst_PROGRAMS = nccmp
 nccmp_SOURCES = \
@@ -16,7 +16,7 @@ nccmp_SOURCES = \
 	opt.c \
 	strlist.c \
 	xmalloc.c
-nccmp_LDADD = $(NC_LIBS)
+nccmp_LDADD = $(NETCDF_LIBS)
 
 noinst_HEADERS = \
 	common.h \
