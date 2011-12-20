@@ -3,7 +3,10 @@
 #include <wreport/error.h>
 #include <string>
 #include <cstdio>
+
+#ifdef HAS_GETOPT_LONG
 #include <getopt.h>
+#endif
 
 using namespace b2nc;
 using namespace wreport;
@@ -19,23 +22,29 @@ void usage(FILE* out)
     fprintf(out, "Options:\n");
     fprintf(out, "  -h, --help                  this help message.\n");
     fprintf(out, "  -v, --verbose               verbose output.\n");
-    fprintf(out, "  --debug                     debug output.\n");
+    fprintf(out, "  -D, --debug                 debug output.\n");
     fprintf(out, "  -o PFX, --outfile=PFX       prefix to use for output files.\n");
     fprintf(out, "  -n                          generate variable names in the form\n");
     fprintf(out, "                              Type_FXXYYY_RRR instead of using a mnemonic.\n");
+#ifndef HAS_GETOPT_LONG
+    fprintf(out, "NOTE: long options are not supported on this system\n");
+#endif
+
 }
 
 int main(int argc, char* argv[])
 {
+#ifdef HAS_GETOPT_LONG
     static struct option long_options[] =
     {
         /* These options set a flag. */
         {"help",    no_argument,       NULL, 'h'},
         {"outfile", required_argument, NULL, 'o'},
         {"verbose", no_argument,       NULL, 'v'},
-        {"debug",   no_argument,         NULL, 1},
+        {"debug",   no_argument,       NULL, 'D'},
         {0, 0, 0, 0}
     };
+#endif
 
     Options options;
 
@@ -44,8 +53,12 @@ int main(int argc, char* argv[])
         /* `getopt_long' stores the option index here. */
         int option_index = 0;
 
-        int c = getopt_long(argc, argv, "o:vhn",
+#ifdef HAS_GETOPT_LONG
+        int c = getopt_long(argc, argv, "o:vhnD",
                 long_options, &option_index);
+#else
+        int c = getopt_long(argc, argv, "o:vhnD");
+#endif
 
         /* Detect the end of the options. */
         if (c == -1)
@@ -62,7 +75,7 @@ int main(int argc, char* argv[])
             case 'n':
                 options.use_mnemonic = false;
                 break;
-            case 1:
+            case 'D':
                 options.debug = true;
                 // debug includes verbose, so fall through into it
             case 'v':

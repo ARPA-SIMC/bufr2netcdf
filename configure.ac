@@ -23,6 +23,11 @@ AC_HEADER_STDC
 dnl Needed by subdir-objects
 AM_PROG_CC_C_O
 
+dnl Check for missing functions in libc
+AC_CHECK_FUNC(getopt_long, [
+	AC_DEFINE([HAS_GETOPT_LONG], 1, [we can use long options])
+])
+
 dnl Check for wibble
 PKG_CHECK_EXISTS([libwibble], [have_wibble=yes], [have_wibble=no])
 if test x$have_wibble = xyes
