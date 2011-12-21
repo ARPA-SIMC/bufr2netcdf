@@ -18,17 +18,24 @@ dnl usage: AC_CHECK_NETCDF([action if found], [action if not found])
 
 AC_DEFUN([AC_CHECK_NETCDF],
 [
-dnl Look for NetCDF3 (which does not use pkg-config)
-NETCDF_CFLAGS=
+dnl Try pkg-config
+PKG_CHECK_EXISTS([netcdf], [have_netcdf=yes], [have_netcdf=no])
+if test $have_netcdf = yes; then
+    PKG_CHECK_MODULES(NETCDF,netcdf)
+fi
 
-dnl Look for the headers
-AC_CHECK_HEADER([netcdfcpp.h], [have_netcdf=yes], [have_netcdf=no])
-
+dnl Else try to find the header in several possible locations
+if test $have_netcdf = no; then
+   dnl Look for NetCDF3 (which does not use pkg-config)
+   NETCDF_CFLAGS=
+   
+   dnl Look for the headers
+   AC_CHECK_HEADER([netcdfcpp.h], [have_netcdf=yes], [have_netcdf=no])
+fi
 if test $have_netcdf = no; then
     AC_CHECK_HEADER([netcdf-3/netcdfcpp.h], [have_netcdf=yes], [have_netcdf=no])
     NETCDF_CFLAGS=-I/usr/include/netcdf-3
 fi
-
 if test $have_netcdf = no; then
     AC_CHECK_HEADER([netcdf/netcdfcpp.h], [have_netcdf=yes], [have_netcdf=no])
     NETCDF_CFLAGS=-I/usr/include/netcdf
