@@ -24,6 +24,7 @@
 #include "mnemo.h"
 #include "ncoutfile.h"
 #include "options.h"
+#include "config.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
 #include <wreport/bulletin/buffers.h>
@@ -597,8 +598,17 @@ void IntArray::putvar(NCOutfile& outfile) const
     if (values.empty()) return;
     size_t start[] = {0};
     size_t count[] = {values.size()};
+#ifdef HAVE_VECTOR_DATA
     int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, values.data());
     error_netcdf::throwf_iferror(res, "storing %zd integer values", values.size());
+#else
+    int* temp = new int[values.size()];
+    for (unsigned i = 0; i < values.size(); ++i)
+	    temp[i] = values[i];
+    int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, temp);
+    error_netcdf::throwf_iferror(res, "storing %zd integer values", values.size());
+    delete temp;
+#endif
 }
 
 }

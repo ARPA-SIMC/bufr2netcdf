@@ -21,4 +21,4 @@ dist_table_DATA = \
 	tables/mnem_013 \
 	tables/mnem_014
 
-EXTRA_DIST = run-local runtest test/bufr test/netcdf bufr2netcdf.spec
+EXTRA_DIST = doc run-local runtest test/bufr test/netcdf bufr2netcdf.spec m4/netcdf.m4 m4/pkg.m4

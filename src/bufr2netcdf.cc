@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
         int c = getopt_long(argc, argv, "o:vhnD",
                 long_options, &option_index);
 #else
-        int c = getopt_long(argc, argv, "o:vhnD");
+        int c = getopt(argc, argv, "o:vhnD");
 #endif
 
         /* Detect the end of the options. */

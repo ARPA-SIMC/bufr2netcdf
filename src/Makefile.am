@@ -2,10 +2,6 @@
 
 SUBDIRS = nccmp .
 
-CFLAGS += -Wall -Werror
-CXXFLAGS += -Wall -Werror
-
-
 INCLUDES = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NETCDF_CFLAGS)
 
 #

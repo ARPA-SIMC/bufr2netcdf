@@ -263,8 +263,17 @@ struct SingleIntValArray : public SingleNumberArray<int>
         if (vars.empty()) return;
         size_t start[] = {0};
         size_t count[] = {vars.size()};
+#ifdef HAVE_VECTOR_DATA
         int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, vars.data());
         error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
+#else
+        int* temp = new int[vars.size()];
+        for (unsigned i = 0; i < vars.size(); ++i)
+            temp[i] = vars[i];
+        int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, temp);
+        error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
+        delete temp;
+#endif
     }
 };
 
@@ -277,8 +286,17 @@ struct SingleFloatValArray : public SingleNumberArray<float>
         if (vars.empty()) return;
         size_t start[] = {0};
         size_t count[] = {vars.size()};
+#ifdef HAVE_VECTOR_DATA
         int res = nc_put_vara_float(outfile.ncid, nc_varid, start, count, vars.data());
         error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
+#else
+        float* temp = new float[vars.size()];
+        for (unsigned i = 0; i < vars.size(); ++i)
+            temp[i] = vars[i];
+        int res = nc_put_vara_float(outfile.ncid, nc_varid, start, count, temp);
+        error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
+        delete temp;
+#endif
     }
 };
 
@@ -469,6 +487,7 @@ struct MultiNumberValArray : public MultiValArray<TYPE>
     const TYPE* to_fixed_array(size_t arr_idx, TYPE* storage, size_t storage_size) const
     {
         const vector<TYPE>& vals = this->arrs[arr_idx];
+#ifdef HAVE_VECTOR_DATA
         if (vals.size() < storage_size)
         {
             memcpy(storage, vals.data(), vals.size() * sizeof(TYPE));
@@ -477,6 +496,13 @@ struct MultiNumberValArray : public MultiValArray<TYPE>
             return storage;
         } else
             return vals.data();
+#else
+        for (unsigned i = 0; i < vals.size(); ++i)
+            ((TYPE*)storage)[i] = vals[i];
+        for (size_t i = vals.size(); i < storage_size; ++i)
+            storage[i] = nc_fill<TYPE>();
+        return storage;
+#endif
     }
 };
 

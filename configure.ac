@@ -28,6 +28,21 @@ AC_CHECK_FUNC(getopt_long, [
 	AC_DEFINE([HAS_GETOPT_LONG], 1, [we can use long options])
 ])
 
+dnl Check if std::vector has a std::vector::data method
+AC_CACHE_CHECK(whether the compiler has std::vector::data (),
+	ac_cv_cxx_have_vector_data,
+[AC_LANG_SAVE
+ AC_LANG_CPLUSPLUS
+ AC_TRY_COMPILE([#include <vector>
+using namespace std;
+],[vector<int> v; v.data(); return 0;],
+ ac_cv_cxx_have_vector_data=yes, ac_cv_cxx_have_vector_data=no)
+ AC_LANG_RESTORE
+])
+if test "$ac_cv_cxx_have_vector_data" = yes; then
+ AC_DEFINE(HAVE_VECTOR_DATA,,[define if the compiler has the method std::vector::data ()])
+fi
+
 dnl Check for wibble
 PKG_CHECK_EXISTS([libwibble], [have_wibble=yes], [have_wibble=no])
 if test x$have_wibble = xyes
@@ -55,6 +70,9 @@ tabledir='${datadir}'"/$PACKAGE"
 AC_SUBST(tabledir)
 
 LIBS="$LIBS -lm"
+
+dnl Enable all useful warnings
+AX_CXXFLAGS_WARN_ALL
 
 confdir='${sysconfdir}'"/$PACKAGE"
 AC_SUBST(confdir)
