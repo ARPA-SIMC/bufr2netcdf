@@ -2,6 +2,7 @@
 
 	* Fixed getopt support
 	* Do not include empty dir "doc" into EXTRA_DIST
+	* Refined ignore lists in checks
 	* Version 1.1
 
 2012-01-18  enrico@enricozini.org

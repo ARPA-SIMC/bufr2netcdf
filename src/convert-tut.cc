@@ -160,7 +160,8 @@ template<> template<>
 void to::test<1>()
 {
     Convtest t("cdfin_acars");
-    t.ignore_list.add("^DIFFER : VARIABLE \"[A-Z0-9]+\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_acars\"");
+    // Subcentre is correctly reported as referencing centre, but not in the original NetCDF files
+    t.ignore_list.add("^DIFFER : VARIABLE \"MMIOGS\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_acars\"");
     t.convert();
 }
 
@@ -274,6 +275,10 @@ template<> template<>
 void to::test<12>()
 {
     Convtest t("cdfin_synop");
+
+    // WMO block number is correctly reported as referencing Short station or site name, but not in the original NetCDF files
+    t.ignore_list.add("^DIFFER : VARIABLE \"MII\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_synop\"");
+
     t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference_004024 : VALUES : MGGTP3 <> MGGTP2");
     t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference2_004024 : VALUES : MGGTP2 <> MGGTP3");
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : reference_004024 : VALUES : MGGTP5 <> MGGTP4");
@@ -308,6 +313,10 @@ template<> template<>
 void to::test<15>()
 {
     Convtest t("cdfin_wprof");
+
+    // Subcentre is correctly reported as referencing centre, but not in the original NetCDF files
+    t.ignore_list.add("^DIFFER : VARIABLE \"MMIOGS\" IS MISSING ATTRIBUTE WITH NAME \"references\" IN FILE \".+/netcdf/cdfin_wprof\"");
+
     // TODO: Looks like quirks in nccmp
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> -2147483647");
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : 0 <> 0\n$");
