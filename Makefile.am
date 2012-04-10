@@ -19,6 +19,8 @@ dist_table_DATA = \
 	tables/mnem_011 \
 	tables/mnem_012 \
 	tables/mnem_013 \
-	tables/mnem_014
+	tables/mnem_014 \
+	tables/mnem_015 \
+	tables/mnem_016
 
 EXTRA_DIST = ChangeLog run-local runtest test/bufr test/netcdf bufr2netcdf.spec m4
