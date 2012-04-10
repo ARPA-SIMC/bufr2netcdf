@@ -205,6 +205,9 @@ template<> template<>
 void to::test<6>()
 {
     Convtest t("cdfin_gps_zenith");
+    // The variable is integer in the WMO tables, no idea why the sample NetCDF has float
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE : NWLN : FLOAT <> INT");
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE \"NWLN\" : FLOAT <> INT");
     t.convert();
 }
 
@@ -243,6 +246,10 @@ void to::test<10>()
     t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
     t.ignore_list.add("^DIFFER : VARIABLE : MTVIRQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
 
+    // We render values scaled by positive powers if 10 as floats, not ints
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE : MRGLEN : INT <> FLOAT");
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE \"MRGLEN\" : INT <> FLOAT");
+
     // TODO: Looks like a quirk in nccmp
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> -2147483647");
     // TODO: Another case of bufrx2netcdf skipping some references
@@ -271,6 +278,11 @@ void to::test<12>()
     t.ignore_list.add("^DIFFER : VARIABLE : MTXTXH : ATTRIBUTE : reference2_004024 : VALUES : MGGTP2 <> MGGTP3");
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : reference_004024 : VALUES : MGGTP5 <> MGGTP4");
     t.ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : reference2_004024 : VALUES : MGGTP4 <> MGGTP5");
+
+    // We render values scaled by positive powers if 10 as floats, not ints
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE : MRGLEN : INT <> FLOAT");
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE \"MRGLEN\" : INT <> FLOAT");
+
     t.convert();
 }
 
@@ -305,6 +317,10 @@ void to::test<15>()
     // means "suspect or bad"
     t.ignore_list.add("^DIFFER : VARIABLE : MWMPSQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
     t.ignore_list.add("^DIFFER : VARIABLE : NDNDNQ : POSITION : [0-9]+ [0-9]+ : VALUES : -2147483647 <> 1");
+
+    // We render values scaled by positive powers if 10 as floats, not ints
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE : MRGLEN : INT <> FLOAT");
+    t.ignore_list.add("^DIFFER : TYPE.+ VARIABLE \"MRGLEN\" : INT <> FLOAT");
 
     t.convert();
 }
