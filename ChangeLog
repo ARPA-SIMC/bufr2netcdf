@@ -1,0 +1,13 @@
+2012-04-10  enrico@enricozini.org
+
+	* Fixed getopt support
+	* Do not include empty dir "doc" into EXTRA_DIST
+	* Version 1.1
+
+2012-01-18  enrico@enricozini.org
+
+	* Updated tables to v1.1.5-10
+
+2011-12-21  enrico@enricozini.org
+
+	* Changes needed to port on AIX
