@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(bufr2netcdf, 1.0, [enrico@enricozini.org])
+AC_INIT(bufr2netcdf, 1.1, [enrico@enricozini.org])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_CONFIG_HEADER(config.h)
