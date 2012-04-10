@@ -4,6 +4,8 @@
 #include <string>
 #include <cstdio>
 
+#include "config.h"
+
 #ifdef HAS_GETOPT_LONG
 #include <getopt.h>
 #endif
@@ -82,8 +84,10 @@ int main(int argc, char* argv[])
                 options.verbose = true;
                 break;
             default:
-                error_consistency::throwf("unknown option character %c (%d)", c, c);
-                break;
+                // getopt already prints an error message
+                fputc('\n', stderr);
+                usage(stderr);
+                return 1;
         }
     }
 

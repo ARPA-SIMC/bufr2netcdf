@@ -24,8 +24,10 @@ dnl Needed by subdir-objects
 AM_PROG_CC_C_O
 
 dnl Check for missing functions in libc
+has_getopt_long=no
 AC_CHECK_FUNC(getopt_long, [
 	AC_DEFINE([HAS_GETOPT_LONG], 1, [we can use long options])
+	has_getopt_long=yes
 ])
 
 dnl Check if std::vector has a std::vector::data method
@@ -90,4 +92,5 @@ AC_MSG_NOTICE([
 ===================================================
 $PACKAGE_NAME-$PACKAGE_VERSION configuration:
 AS_HELP_STRING([tests:], [$enable_tests])
+AS_HELP_STRING([getopt_long:], [$has_getopt_long])
 ===================================================])
