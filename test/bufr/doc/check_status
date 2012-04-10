@@ -1,0 +1,51 @@
+We have cheched the output from bufr input compared with bufrex2netcdf:
+Those are the bufr templates taken in account:
+
+acars
+acars uk
+acars us
+amdar
+buoy
+gps zenith
+pilot
+pilot p
+radar vad
+rass
+ship
+synop
+temp
+temp ship
+wind prof
+
+
+* Know differences with DWD converter
+
+ - Variables with scale < 0 (i.e. whose value is multiplied by 10 to the
+power of a positive number) are represented as floats instead of ints.
+
+ - There are more "references_*" attributes in the output. Some are
+dropped by the DWD converter and we failed to find a logic for it.
+
+ - Decoded, DWD-style optional section 2 variables are not present in
+the converted NetCDF since we do not have the specifications of the
+DWD-style section 2. Noted by Dreiucker Michael:
+"The interpretation of Section 2 corresponds to the usual DWD way
+   The variables listed within section 2 are all defined values.
+   They are used for DWD internal documentation.
+   The meaning of values for those variables is shown in netcdf format only (cf section2_backup_day e.g.)"
+
+ - The "edition_number" variable does not have "references_*"
+attributes. Noted by Dreiucker Michael:
+"Correct. Reference of edition_number should not bei evaluated"
+
+ - Some "long_name" and "units" attributes are equivalent but slightly
+different because of a difference in the BUFR decoding tables.
+
+ - There are cases, where the delayed replication variable has a value
+that is constant across all input BUFRs, where the DWD converter still
+uses "dim1_length=<VARIABLE_NAME>" instead of "dim1_length=_constant".
+
+- "reference_004024" and "reference2_004024" values are swapped compared
+to the DWD converter; this can be corrected once it is confirmed that
+the order is relevant and that the order used by the DWD converter is
+correct.
