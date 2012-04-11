@@ -20,6 +20,7 @@
  */
 
 #include "utils.h"
+#include "compat.h"
 #include <netcdf.h>
 #include <cstdarg>
 #include <cstdio>
