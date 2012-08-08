@@ -96,8 +96,24 @@ public:
 class Dispatcher : public BufrSink
 {
 protected:
+    /**
+     * Bulletin dispatch key.
+     *
+     * All bulletins with these info in common will be aggregated in a single
+     * NetCDF.
+     */
+    struct Key
+    {
+        int type;
+        int subtype;
+        int localsubtype;
+        std::vector<wreport::Varcode> datadesc;
+
+        Key(const wreport::BufrBulletin& bulletin);
+        bool operator<(const Key& v) const;
+    };
     const Options& opts;
-    std::map< std::vector<wreport::Varcode>, Outfile* > outfiles;
+    std::map<Key, Outfile*> outfiles;
     std::set<std::string> used_fnames;
 
     std::string get_fname(const wreport::BufrBulletin& bulletin);

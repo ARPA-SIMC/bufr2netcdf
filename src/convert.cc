@@ -70,6 +70,25 @@ void read_bufr(FILE* in, BufrSink& out, const char* fname)
     }
 }
 
+Dispatcher::Key::Key(const wreport::BufrBulletin& bulletin)
+{
+    type = bulletin.type;
+    subtype = bulletin.subtype;
+    localsubtype = bulletin.localsubtype;
+    datadesc = bulletin.datadesc;
+}
+
+bool Dispatcher::Key::operator<(const Key& v) const
+{
+    if (type < v.type) return true;
+    if (type > v.type) return false;
+    if (subtype < v.subtype) return true;
+    if (subtype > v.subtype) return false;
+    if (localsubtype < v.localsubtype) return true;
+    if (localsubtype > v.localsubtype) return false;
+    return datadesc < v.datadesc;
+}
+
 Dispatcher::Dispatcher(const Options& opts)
     : opts(opts)
 {
@@ -82,7 +101,7 @@ Dispatcher::~Dispatcher()
 
 void Dispatcher::close()
 {
-    for (std::map< std::vector<wreport::Varcode>, Outfile* >::iterator i = outfiles.begin();
+    for (std::map<Key, Outfile*>::iterator i = outfiles.begin();
             i != outfiles.end(); ++i)
     {
         i->second->close();
@@ -116,7 +135,8 @@ std::string Dispatcher::get_fname(const wreport::BufrBulletin& bulletin)
 
 Outfile& Dispatcher::get_outfile(const wreport::BufrBulletin& bulletin)
 {
-    std::map< std::vector<wreport::Varcode>, Outfile* >::iterator i = outfiles.find(bulletin.datadesc);
+    Key key(bulletin);
+    std::map<Key, Outfile*>::iterator i = outfiles.find(key);
     if (i != outfiles.end())
         return *(i->second);
     else
@@ -124,7 +144,7 @@ Outfile& Dispatcher::get_outfile(const wreport::BufrBulletin& bulletin)
         auto_ptr<Outfile> out = Outfile::get(opts);
         Outfile& res = *out;
         out->open(get_fname(bulletin));
-        outfiles.insert(make_pair(bulletin.datadesc, out.release()));
+        outfiles.insert(make_pair(key, out.release()));
         return res;
     }
 }
