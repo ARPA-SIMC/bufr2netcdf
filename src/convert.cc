@@ -123,10 +123,10 @@ std::string Dispatcher::get_fname(const wreport::BufrBulletin& bulletin)
     base += catstr;
 
     string cand = base + ".nc";
-    for (unsigned i = 0; used_fnames.find(cand) != used_fnames.end(); ++i)
+    for (unsigned i = 1; used_fnames.find(cand) != used_fnames.end(); ++i)
     {
         char ext[20];
-        snprintf(ext, 20, "-%d.nc", i);
+        snprintf(ext, 20, ".%d.nc", i);
         cand = base + ext;
     }
     used_fnames.insert(cand);
