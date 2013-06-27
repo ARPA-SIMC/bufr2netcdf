@@ -6,7 +6,7 @@ if DO_TESTS
 # nccmp comparison program
 #
 
-INCLUDES = $(NETCDF_CFLAGS)
+AM_CPPFLAGS = $(NETCDF_CFLAGS)
 
 noinst_PROGRAMS = nccmp
 nccmp_SOURCES = \

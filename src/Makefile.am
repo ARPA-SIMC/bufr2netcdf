@@ -2,7 +2,7 @@
 
 SUBDIRS = nccmp .
 
-INCLUDES = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NETCDF_CFLAGS)
+AM_CPPFLAGS = $(WREPORT_CFLAGS) $(WIBBLE_CFLAGS) $(NETCDF_CFLAGS)
 
 #
 # Convenience library with conversion code
@@ -33,7 +33,11 @@ if DO_TESTS
 
 check_PROGRAMS = tut_test
 TESTS_ENVIRONMENT = $(top_srcdir)/runtest
-TESTS = $(check_PROGRAMS)
+
+check-local:
+	for test in $(check_PROGRAMS); do \
+		$(TESTS_ENVIRONMENT) $$test ; \
+	done
 
 CXXFLAGS += -O0
 
