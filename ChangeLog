@@ -1,3 +1,8 @@
+2013-06-27  enrico@enricozini.org
+
+	* Deal with BUFR files with width/scale/string len changes
+	* Version 1.2
+
 2012-04-10  enrico@enricozini.org
 
 	* Fixed getopt support

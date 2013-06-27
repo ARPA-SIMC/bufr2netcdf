@@ -313,6 +313,17 @@ struct PlanMaker : opcode::Visitor
 
     bool expect_bitmap;
 
+    /// Current value of scale change from C modifier
+    int c_scale_change;
+
+    /// Current value of width change from C modifier
+    int c_width_change;
+
+    /**
+     * Current value of string length override from C08 modifiers (0 for no
+     * override)
+     */
+    int c_string_len_override;
 
     PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
         : plan(plan),
@@ -320,7 +331,8 @@ struct PlanMaker : opcode::Visitor
           namer(Namer::get(opts).release()),
           loop_index(0),
           qbits_info(MutableVarinfo::create_singleuse()),
-          expect_bitmap(false)
+          expect_bitmap(false),
+          c_scale_change(0), c_width_change(0), c_string_len_override(0)
     {
         qbits_info->set(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 0, 0, 10, 0, 32);
         current_plan.push(Section(*this, plan.create_section()));
@@ -329,6 +341,45 @@ struct PlanMaker : opcode::Visitor
     ~PlanMaker()
     {
         delete namer;
+    }
+
+    /**
+     * Return the Varinfo describing the variable \a code, possibly altered
+     * taking into account current C modifiers
+     */
+    Varinfo get_varinfo(Varcode code)
+    {
+        Varinfo peek = btable->query(code);
+
+        if (!c_scale_change && !c_width_change && !c_string_len_override)
+            return peek;
+
+        int scale = peek->scale;
+        if (c_scale_change)
+            scale += c_scale_change;
+
+        int bit_len = peek->bit_len;
+        if (peek->is_string() && c_string_len_override)
+            bit_len = c_string_len_override * 8;
+        else if (c_width_change)
+            bit_len += c_width_change;
+
+        return btable->query_altered(code, scale, bit_len);
+    }
+
+    void c_change_data_width(Varcode code, int change)
+    {
+        c_width_change = change;
+    }
+
+    void c_change_data_scale(Varcode code, int change)
+    {
+        c_scale_change = change;
+    }
+
+    void c_char_data_override(Varcode code, unsigned new_length)
+    {
+        c_string_len_override = new_length;
     }
 
     void b_variable(Varcode code)
@@ -340,7 +391,7 @@ struct PlanMaker : opcode::Visitor
             if (!btable->contains(code))
                 return;
 
-        Varinfo info = btable->query(code);
+        Varinfo info = get_varinfo(code);
         s.add_data(info);
 
         if (plan.opts.debug)
