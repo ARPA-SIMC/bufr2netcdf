@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011  ARPA-SIM <urpsim@smr.arpa.emr.it>
+ * Copyright (C) 2011--2013  ARPA-SIM <urpsim@smr.arpa.emr.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include <wibble/string.h>
 #include <wibble/sys/fs.h>
 #include <netcdf.h>
+#include <unistd.h>
 #include <cstdlib>
 
 using namespace b2nc;
