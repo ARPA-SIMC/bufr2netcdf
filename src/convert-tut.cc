@@ -349,6 +349,13 @@ void to::test<17>()
     t.make_netcdf();
 }
 
+template<> template<>
+void to::test<18>()
+{
+    Convtest t("atms2.bufr");
+    t.make_netcdf();
+}
+
 }
 
 // vim:set ts=4 sw=4:

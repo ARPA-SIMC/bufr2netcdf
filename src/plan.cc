@@ -319,6 +319,9 @@ struct PlanMaker : opcode::Visitor
     /// Current value of width change from C modifier
     int c_width_change;
 
+    /// Increase of scale, reference value and data width
+    int c_scale_ref_width_increase;
+
     /**
      * Current value of string length override from C08 modifiers (0 for no
      * override)
@@ -332,7 +335,9 @@ struct PlanMaker : opcode::Visitor
           loop_index(0),
           qbits_info(MutableVarinfo::create_singleuse()),
           expect_bitmap(false),
-          c_scale_change(0), c_width_change(0), c_string_len_override(0)
+          c_scale_change(0), c_width_change(0),
+	  c_scale_ref_width_increase(0),
+	  c_string_len_override(0)
     {
         qbits_info->set(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 0, 0, 10, 0, 32);
         current_plan.push(Section(*this, plan.create_section()));
@@ -351,7 +356,7 @@ struct PlanMaker : opcode::Visitor
     {
         Varinfo peek = btable->query(code);
 
-        if (!c_scale_change && !c_width_change && !c_string_len_override)
+        if (!c_scale_change && !c_width_change && !c_string_len_override && !c_scale_ref_width_increase)
             return peek;
 
         int scale = peek->scale;
@@ -364,6 +369,14 @@ struct PlanMaker : opcode::Visitor
         else if (c_width_change)
             bit_len += c_width_change;
 
+        if (c_scale_ref_width_increase)
+        {
+            // TODO: misses reference value adjustment
+            scale += c_scale_ref_width_increase;
+            bit_len += (10 * c_scale_ref_width_increase + 2) / 3;
+            // c_ref *= 10**code
+        }
+
         return btable->query_altered(code, scale, bit_len);
     }
 
@@ -375,6 +388,11 @@ struct PlanMaker : opcode::Visitor
     void c_change_data_scale(Varcode code, int change)
     {
         c_scale_change = change;
+    }
+
+    void c_increase_scale_ref_width(Varcode code, int change)
+    {
+        c_scale_ref_width_increase = change;
     }
 
     void c_char_data_override(Varcode code, unsigned new_length)
