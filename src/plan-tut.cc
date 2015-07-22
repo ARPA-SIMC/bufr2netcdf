@@ -419,7 +419,77 @@ void to::test<3>()
     //plan.print(stderr);
 }
 
+template<> template<>
+void to::test<4>()
+{
+    Options opts;
+
+    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
+    read_nth_bufr(*bulletin, "cdfin_acars_us");
+
+    Plan plan(opts);
+    plan.build(*bulletin);
+
+    wassert(actual(plan.sections.size()) == 2);
+
+    // Check toplevel section
+    const plan::Section* s = plan.sections[0];
+    wassert(actual(s->entries.size()) == 29);
+
+    // All entries except replicated sections have data
+    for (unsigned i = 0; i < 29; ++i)
+    {
+        WIBBLE_TEST_INFO(info);
+        info() << "Entry " << i << "/29";
+
+        if (i != 28)
+            wassert(actual(s->entries[i]->data).istrue());
+        else
+            wassert(actual(s->entries[i]->data).isfalse());
+
+        wassert(actual(s->entries[i]->qbits).isfalse());
+    }
+
+    // Check plan contents
+    wassert(actual(s->entries[  0]->data->name) == "YXXNN");
+    wassert(actual(s->entries[  1]->data->name) == "YAIRN");
+    wassert(actual(s->entries[  2]->data->name) == "NIX");
+    wassert(actual(s->entries[  3]->data->name) == "NIW");
+    wassert(actual(s->entries[  4]->data->name) == "MPOTO");
+    wassert(actual(s->entries[  5]->data->name) == "NADRS");
+    wassert(actual(s->entries[  6]->data->name) == "NOSLL");
+    wassert(actual(s->entries[  7]->data->name) == "YAGRS");
+    wassert(actual(s->entries[  8]->data->name) == "MJJJ");
+    wassert(actual(s->entries[  9]->data->name) == "MMM");
+    wassert(actual(s->entries[ 10]->data->name) == "MYY");
+    wassert(actual(s->entries[ 11]->data->name) == "MGG");
+    wassert(actual(s->entries[ 12]->data->name) == "NGG");
+    wassert(actual(s->entries[ 13]->data->name) == "MSEC");
+    wassert(actual(s->entries[ 14]->data->name) == "MLALA");
+    wassert(actual(s->entries[ 15]->data->name) == "MLOLO");
+    wassert(actual(s->entries[ 16]->data->name) == "MPN");
+    wassert(actual(s->entries[ 17]->data->name) == "MQARA");
+    wassert(actual(s->entries[ 18]->data->name) == "MPHAI");
+    wassert(actual(s->entries[ 19]->data->name) == "MIAA");
+    wassert(actual(s->entries[ 20]->data->name) == "NDNDN");
+    wassert(actual(s->entries[ 21]->data->name) == "NFNFN");
+    wassert(actual(s->entries[ 22]->data->name) == "MTN");
+    wassert(actual(s->entries[ 23]->data->name) == "MMIXR");
+    wassert(actual(s->entries[ 24]->data->name) == "MUUU");
+    wassert(actual(s->entries[ 25]->data->name) == "MAIV");
+    wassert(actual(s->entries[ 26]->data->name) == "MMRQ");
+    wassert(actual(s->entries[ 27]->data->name) == "NGGTI");
+    wassert(actual(s->entries[ 28]->data).isfalse());
+    wassert(actual(s->entries[ 28]->subsection).istrue());
+    wassert(actual(s->entries[ 28]->subsection->id) == 1);
+
+    // Check other sections
+    s = plan.sections[1];
+    wassert(actual(s->entries.size()) == 1);
+    wassert(actual(s->entries[0]->data).istrue());
+    wassert(actual(s->entries[0]->data->name) == "NGGTM");
+
+    //plan.print(stderr);
 }
 
-// vim:set ts=4 sw=4:
-
+}
