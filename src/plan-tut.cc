@@ -45,7 +45,7 @@ struct plan_shar
 };
 TESTGRP(plan);
 
-static void read_nth_bufr(BufrBulletin& bulletin, const std::string& testname, unsigned idx=0)
+static unique_ptr<BufrBulletin> read_nth_bufr(const std::string& testname, unsigned idx=0)
 {
     // Open input file
     string srcfile(b2nc::tests::datafile("bufr/" + testname));
@@ -54,13 +54,15 @@ static void read_nth_bufr(BufrBulletin& bulletin, const std::string& testname, u
         error_system::throwf("cannot open %s", srcfile.c_str());
 
     string rawmsg;
+    unique_ptr<BufrBulletin> res;
     for (unsigned i = 0; i <= idx && BufrBulletin::read(infd, rawmsg, srcfile.c_str()); ++i)
     {
         // Decode the BUFR message
-        bulletin.decode(rawmsg);
+        res = BufrBulletin::decode(rawmsg);
     }
 
     fclose(infd);
+    return res;
 }
 
 template<> template<>
@@ -68,8 +70,7 @@ void to::test<1>()
 {
     Options opts;
 
-    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
-    read_nth_bufr(*bulletin, "cdfin_acars");
+    unique_ptr<BufrBulletin> bulletin = read_nth_bufr("cdfin_acars");
 
     Plan plan(opts);
     plan.build(*bulletin);
@@ -157,8 +158,7 @@ void to::test<2>()
 {
     Options opts;
 
-    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
-    read_nth_bufr(*bulletin, "cdfin_gps_zenith");
+    auto bulletin = read_nth_bufr("cdfin_gps_zenith");
 
     Plan plan(opts);
     plan.build(*bulletin);
@@ -237,8 +237,7 @@ void to::test<3>()
 {
     Options opts;
 
-    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
-    read_nth_bufr(*bulletin, "cdfin_buoy");
+    auto bulletin = read_nth_bufr("cdfin_buoy");
 
     Plan plan(opts);
     plan.build(*bulletin);
@@ -424,8 +423,7 @@ void to::test<4>()
 {
     Options opts;
 
-    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
-    read_nth_bufr(*bulletin, "cdfin_acars_us");
+    auto bulletin = read_nth_bufr("cdfin_acars_us");
 
     Plan plan(opts);
     plan.build(*bulletin);
@@ -497,8 +495,7 @@ void to::test<5>()
 {
     Options opts;
 
-    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
-    read_nth_bufr(*bulletin, "bug_temp");
+    auto bulletin = read_nth_bufr("bug_temp");
 
     Plan plan(opts);
     plan.build(*bulletin);

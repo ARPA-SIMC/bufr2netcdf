@@ -27,7 +27,7 @@
 #include "config.h"
 #include <wreport/var.h>
 #include <wreport/bulletin.h>
-#include <wreport/bulletin/buffers.h>
+//#include <wreport/bulletin/buffers.h>
 #include <wreport/bulletin/internals.h>
 #include <netcdf.h>
 #include <stack>
@@ -38,24 +38,24 @@ using namespace std;
 
 namespace b2nc {
 
-class ArrayBuilder : public bulletin::ConstBaseVisitor
+class ArrayBuilder : public bulletin::UncompressedEncoder
 {
 protected:
-    virtual void do_attr(Varinfo info, unsigned var_pos, Varcode attr_code) {}
-    virtual void do_associated_field(unsigned bit_count, unsigned significance) {}
-    virtual const Var& do_semantic_var(Varinfo info)
-    {
-        const Var& var = get_var(current_var);
-        do_var(info);
-        return var;
-    }
+    //virtual void do_attr(Varinfo info, unsigned var_pos, Varcode attr_code) {}
+    //virtual void do_associated_field(unsigned bit_count, unsigned significance) {}
+    //virtual const Var& do_semantic_var(Varinfo info)
+    //{
+    //    const Var& var = get_var(current_var);
+    //    convert_var(info);
+    //    return var;
+    //}
 
     Arrays& arrays;
 
     std::stack<plan::Section*> cur_section;
 
     map<Varcode, const ValArray*> context;
-    int& bufr_idx;
+    unsigned bufr_idx;
 
     /*
      * The next two variables are used to deal with [begin,end] hour ranges
@@ -89,11 +89,9 @@ protected:
                 v.print(stderr);
             }
         }
-        if (v.data && v.data->info->var != code)
+        if (v.data && v.data->info->code != code)
             error_consistency::throwf("out of sync at %u: vars mismatch (%d%02d%03d != %d%02d%03d)",
-                    cur_section.top()->cursor,
-                    WR_VAR_F(v.data->info->var), WR_VAR_X(v.data->info->var), WR_VAR_Y(v.data->info->var),
-                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+                    cur_section.top()->cursor, WR_VAR_FXY(v.data->info->code), WR_VAR_FXY(code));
         return v;
     }
 
@@ -119,29 +117,17 @@ protected:
     }
 
 public:
-    ArrayBuilder(const Bulletin& bulletin, Arrays& arrays, int& bufr_idx)
-        : bulletin::ConstBaseVisitor(bulletin),
+    ArrayBuilder(const Bulletin& bulletin, unsigned subset_no, Arrays& arrays, unsigned bufr_idx)
+        : bulletin::UncompressedEncoder(bulletin, subset_no),
           arrays(arrays),
           bufr_idx(bufr_idx),
           prev_code(0), prev_code_count(0)
     {
-    }
-
-    virtual void do_start_subset(unsigned subset_no, const Subset& current_subset)
-    {
-        bulletin::ConstBaseVisitor::do_start_subset(subset_no, current_subset);
-        context.clear();
-        ++bufr_idx;
-        prev_code = 0;
-        prev_code_count = 0;
-
-        // Start with a fresh section stack
-        while (!cur_section.empty()) cur_section.pop();
         cur_section.push(arrays.plan.sections[0]);
         cur_section.top()->cursor = 0;
     }
 
-    virtual void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops)
+    void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops) override
     {
         if (arrays.debug)
             fprintf(stderr, "Begin replicated section %01d%02d%03d/%01d%02d%03d\n",
@@ -150,15 +136,11 @@ public:
 
         plan::Section* cur_top = cur_section.top();
 
-        bulletin::ConstBaseVisitor::r_replication(code, delayed_code, ops);
+        UncompressedEncoder::r_replication(code, delayed_code, ops);
 
         if (cur_top != cur_section.top())
             // If it iterated, we need to pop the subsection from the stack
             cur_section.pop();
-
-        // Skip past the subsection
-        if (cur_section.top()->current().subsection)
-            cur_section.top()->cursor++;
 
         if (arrays.debug)
         {
@@ -168,11 +150,15 @@ public:
                     WR_VAR_F(delayed_code), WR_VAR_X(delayed_code), WR_VAR_Y(delayed_code));
             v.print(stderr);
         }
+
+        // Skip past the subsection
+        if (cur_section.top()->current().subsection)
+            cur_section.top()->cursor++;
     }
 
-    virtual void do_start_repetition(unsigned idx)
+    void run_r_repetition(unsigned cur, unsigned total) override
     {
-        if (idx == 0)
+        if (cur == 0)
         {
             plan::Section* plan_sec = section_for_current_position();
             cur_section.push(plan_sec);
@@ -180,7 +166,12 @@ public:
         cur_section.top()->cursor = 0;
 
         if (arrays.debug)
-            fprintf(stderr, "Repetition #%u\n", idx);
+            fprintf(stderr, "Repetition #%u/%u %u elements\n", cur, total, opcode_stack.top().size());
+
+        UncompressedEncoder::run_r_repetition(cur, total);
+
+        if (arrays.debug)
+            fprintf(stderr, "Repetition #%u/%u ended\n", cur, total);
     }
 
     // Returns the qbit attribute for this variable, or NULL if none is found
@@ -225,13 +216,15 @@ public:
     }
     */
 
-    virtual void do_var(Varinfo info)
+    void encode_var(Varinfo info, const Var& var)
     {
-        const Var& var = get_var();
         if (WR_VAR_F(var.code()) == 2 && WR_VAR_X(var.code()) == 6)
             // Skip unknown local descriptors
             return;
-        plan::Variable& v = variable_for(info->var);
+        if (info->type == Vartype::Binary)
+            // Skip unknown local descriptors
+            return;
+        plan::Variable& v = variable_for(info->code);
         if (v.data)
         {
             v.data->add(var, bufr_idx);
@@ -253,7 +246,25 @@ public:
         cur_section.top()->cursor++;
     }
 
-    virtual void do_char_data(Varcode code)
+    unsigned define_bitmap_delayed_replication_factor(Varinfo info) override
+    {
+        const Var& var = peek_var();
+        return var.info()->len;
+    }
+
+    void define_attribute(Varinfo info, unsigned pos) override
+    {
+        const Var& var = get_var(pos);
+        if (const Var* a = var.enqa(info->code))
+            encode_var(info, *a);
+        else
+        {
+            Var attr(info);
+            encode_var(info, attr);
+        }
+    }
+
+    void define_raw_character_data(Varcode code) override
     {
         const Var& var = get_var();
         plan::Variable& v = cur_section.top()->current();
@@ -261,8 +272,8 @@ public:
             error_consistency::throwf("out of sync at %u: value is a subsection instead of a variable", cur_section.top()->cursor);
         if (v.data)
         {
-            if (WR_VAR_F(v.data->info->var) != WR_VAR_F(var.code())
-              || WR_VAR_X(v.data->info->var) != WR_VAR_X(var.code()))
+            if (WR_VAR_F(v.data->info->code) != WR_VAR_F(var.code())
+              || WR_VAR_X(v.data->info->code) != WR_VAR_X(var.code()))
                 error_consistency::throwf("out of sync at %u: vars mismatch", cur_section.top()->cursor);
             v.data->add(var, bufr_idx);
         }
@@ -280,12 +291,13 @@ Arrays::Arrays(const Options& opts)
       date_year(0), date_month(0), date_day(0),
       time_hour(0), time_minute(0), time_second(0),
       date_varid(-1), time_varid(-1),
-      bufr_idx(-1), verbose(opts.verbose), debug(opts.debug)
+      verbose(opts.verbose), debug(opts.debug)
 {
 }
 
 Arrays::~Arrays()
 {
+    delete first_bulletin;
 }
 
 #if 0
@@ -303,7 +315,7 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
     Varinfo info = attr ? attr->info() : var.info();
 
     // Create a new array
-    auto_ptr<ValArray> arr;
+    unique_ptr<ValArray> arr;
     if (tag.empty())
         arr.reset(ValArray::make_singlevalarray(type, info));
     else
@@ -346,13 +358,13 @@ ValArray& Arrays::get_valarray(Namer::DataType type, const Var& var, const std::
 }
 #endif
 
-void Arrays::add(const Bulletin& bulletin)
+void Arrays::add(unique_ptr<Bulletin>&& bulletin)
 {
     if (plan.sections.empty())
     {
         if (debug)
             fprintf(stderr, "\nBuilding conversion plan:\n");
-        plan.build(bulletin);
+        plan.build(*bulletin);
         if (debug)
         {
             fprintf(stderr, "\nComputed conversion plan:\n");
@@ -360,8 +372,14 @@ void Arrays::add(const Bulletin& bulletin)
         }
     }
 
-    ArrayBuilder ab(bulletin, *this, bufr_idx);
-    bulletin.visit(ab);
+    for (unsigned i = 0; i < bulletin->subsets.size(); ++i)
+    {
+        ArrayBuilder ab(*bulletin, i, *this, bufr_idx++);
+        ab.run();
+    }
+
+    if (!first_bulletin)
+        first_bulletin = bulletin.release();
 }
 
 void Arrays::dump(FILE* out)
@@ -493,15 +511,10 @@ Sections::Sections(unsigned idx)
 {
 }
 
-void Sections::add(const wreport::BufrBulletin& bulletin)
+void Sections::add(const wreport::BufrBulletin& bulletin, const std::string& raw)
 {
-    if (!bulletin.raw_details)
-    {
-        values.push_back(string());
-        return;
-    }
-
-    unsigned len = bulletin.raw_details->sec[idx+1] - bulletin.raw_details->sec[idx];
+    unsigned start = idx == 0 ? 0 : bulletin.section_end[idx - 1];
+    unsigned len = bulletin.section_end[idx] - start;
     if (len == 0)
     {
         values.push_back(string());
@@ -510,8 +523,8 @@ void Sections::add(const wreport::BufrBulletin& bulletin)
 
     if (len > max_length)
         max_length = len;
-    const char* buf = (const char*)bulletin.raw_details->data + bulletin.raw_details->sec[idx];
-    values.push_back(string(buf, len));
+
+    values.push_back(raw.substr(start, len));
 }
 
 bool Sections::define(NCOutfile& outfile)
@@ -604,7 +617,7 @@ void IntArray::putvar(NCOutfile& outfile) const
 #else
     int* temp = new int[values.size()];
     for (unsigned i = 0; i < values.size(); ++i)
-	    temp[i] = values[i];
+        temp[i] = values[i];
     int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, temp);
     error_netcdf::throwf_iferror(res, "storing %zd integer values", values.size());
     delete temp;

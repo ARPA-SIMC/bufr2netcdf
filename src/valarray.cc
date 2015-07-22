@@ -68,20 +68,28 @@ struct BaseValArray : public ValArray
     void add_common_attributes(int ncid)
     {
         int res;
-        if (info->is_string())
+        switch (info->type)
         {
-            char missing = NC_FILL_CHAR;
-            res = nc_put_att_text(ncid, nc_varid, "_FillValue", 1, &missing);
-        }
-        else if (info->scale == 0)
-        {
-            int missing = NC_FILL_INT;
-            res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
-        }
-        else
-        {
-            float missing = NC_FILL_FLOAT;
-            res = nc_put_att_float(ncid, nc_varid, "_FillValue", NC_FLOAT, 1, &missing);
+            case Vartype::String:
+            {
+                char missing = NC_FILL_CHAR;
+                res = nc_put_att_text(ncid, nc_varid, "_FillValue", 1, &missing);
+                break;
+            }
+            case Vartype::Integer:
+            {
+                int missing = NC_FILL_INT;
+                res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
+                break;
+            }
+            case Vartype::Decimal:
+            {
+                float missing = NC_FILL_FLOAT;
+                res = nc_put_att_float(ncid, nc_varid, "_FillValue", NC_FLOAT, 1, &missing);
+                break;
+            }
+            default:
+                error_unimplemented::throwf("cannot export variable of type '%s'", vartype_format(info->type));
         }
         error_netcdf::throwf_iferror(res, "setting _FillValue attribute for %s", name.c_str());
 
@@ -100,9 +108,9 @@ struct BaseValArray : public ValArray
 
         int ifxy;
         if (master)
-            ifxy = WR_VAR_F(master->info->var) * 100000 + WR_VAR_X(master->info->var) * 1000 + WR_VAR_Y(master->info->var);
+            ifxy = WR_VAR_F(master->info->code) * 100000 + WR_VAR_X(master->info->code) * 1000 + WR_VAR_Y(master->info->code);
         else
-            ifxy = WR_VAR_F(info->var) * 100000 + WR_VAR_X(info->var) * 1000 + WR_VAR_Y(info->var);
+            ifxy = WR_VAR_F(info->code) * 100000 + WR_VAR_X(info->code) * 1000 + WR_VAR_Y(info->code);
         res = nc_put_att_int(ncid, nc_varid, "ifxy", NC_INT, 1, &ifxy);
         error_netcdf::throwf_iferror(res, "setting ifxy attribute for %s", name.c_str());
 
@@ -144,7 +152,7 @@ struct BaseValArray : public ValArray
                     continue;
 
                 // Do not reference the same varcode as ourself
-                if (arr->info->var == info->var)
+                if (arr->info->code == info->code)
                     continue;
 
                 if (WR_VAR_F(code) == 0)
@@ -160,10 +168,7 @@ struct BaseValArray : public ValArray
                             WR_VAR_X(code),
                             WR_VAR_Y(code));
                 else
-                    snprintf(att_name, 20, "reference_%01d%02d%03d",
-                            WR_VAR_F(code),
-                            WR_VAR_X(code),
-                            WR_VAR_Y(code));
+                    snprintf(att_name, 20, "reference_%01d%02d%03d", WR_VAR_FXY(code));
 
                 res = nc_put_att_text(ncid, nc_varid, att_name, arr->name.size(), arr->name.data());
                 error_netcdf::throwf_iferror(res, "setting %s attribute for %s", att_name, this->name.c_str());
@@ -627,12 +632,17 @@ ValArray* ValArray::make_singlevalarray(Namer::DataType type, Varinfo info)
     switch (type)
     {
         case Namer::DT_DATA:
-            if (info->is_string())
-                return new SingleStringValArray(info);
-            else if (info->scale == 0)
-                return new SingleIntValArray(info);
-            else
-                return new SingleFloatValArray(info);
+            switch (info->type)
+            {
+                case Vartype::String:
+                    return new SingleStringValArray(info);
+                case Vartype::Integer:
+                    return new SingleIntValArray(info);
+                case Vartype::Decimal:
+                    return new SingleFloatValArray(info);
+                default:
+                    error_unimplemented::throwf("cannot export variables of type '%s'", vartype_format(info->type));
+            }
         case Namer::DT_QBITS:
             return new SingleIntValArray(info);
         case Namer::DT_CHAR:
@@ -647,12 +657,17 @@ ValArray* ValArray::make_multivalarray(Namer::DataType type, Varinfo info, LoopI
     switch (type)
     {
         case Namer::DT_DATA:
-            if (info->is_string())
-                return new MultiStringValArray(info, loopinfo);
-            else if (info->scale == 0)
-                return new MultiIntValArray(info, loopinfo);
-            else
-                return new MultiFloatValArray(info, loopinfo);
+            switch (info->type)
+            {
+                case Vartype::String:
+                    return new MultiStringValArray(info, loopinfo);
+                case Vartype::Integer:
+                    return new MultiIntValArray(info, loopinfo);
+                case Vartype::Decimal:
+                    return new MultiFloatValArray(info, loopinfo);
+                default:
+                    error_unimplemented::throwf("cannot export variables of type '%s'", vartype_format(info->type));
+            }
         case Namer::DT_QBITS:
             return new MultiIntValArray(info, loopinfo);
         case Namer::DT_CHAR:

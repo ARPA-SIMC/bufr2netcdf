@@ -41,7 +41,7 @@ struct Options;
 struct BufrSink
 {
     virtual ~BufrSink() {}
-    virtual void add_bufr(const wreport::BufrBulletin& bulletin) = 0;
+    virtual void add_bufr(std::unique_ptr<wreport::BufrBulletin>&& bulletin, const std::string& raw) = 0;
 };
 
 /**
@@ -79,12 +79,12 @@ public:
     /**
      * Add all the contents of the decoded BUFR message
      */
-    virtual void add_bufr(const wreport::BufrBulletin& bulletin) = 0;
+    void add_bufr(std::unique_ptr<wreport::BufrBulletin>&& bulletin, const std::string& raw) override = 0;
 
     /**
      * Create an Outfile
      */
-    static std::auto_ptr<Outfile> get(const Options& opts);
+    static std::unique_ptr<Outfile> get(const Options& opts);
 };
 
 /**
@@ -125,7 +125,7 @@ public:
 
     void close();
 
-    virtual void add_bufr(const wreport::BufrBulletin& bulletin);
+    void add_bufr(std::unique_ptr<wreport::BufrBulletin>&& bulletin, const std::string& raw) override;
 };
 
 }

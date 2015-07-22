@@ -60,10 +60,16 @@ struct Arrays
     int date_varid;
     int time_varid;
 
-    int bufr_idx;
+    unsigned bufr_idx = 0;
 
     bool verbose;
     bool debug;
+
+    /*
+     * Keep a copy of the first bulletin that we use to generate the plan, as
+     * the plan's temporay Varinfos will be managed by it
+     */
+    wreport::Bulletin* first_bulletin = 0;
 
     Arrays(const Options& opts);
     ~Arrays();
@@ -71,7 +77,7 @@ struct Arrays
     /**
      * Adds all the subsets for a bulletin.
      */
-    void add(const wreport::Bulletin& bulletin);
+    void add(std::unique_ptr<wreport::Bulletin>&& bulletin);
 
     bool define(NCOutfile& outfile);
     void putvar(NCOutfile& outfile) const;
@@ -90,7 +96,7 @@ struct Sections
 
     Sections(unsigned idx);
 
-    void add(const wreport::BufrBulletin& bulletin);
+    void add(const wreport::BufrBulletin& bulletin, const std::string& raw);
 
     bool define(NCOutfile& outfile);
     void putvar(NCOutfile& outfile) const;

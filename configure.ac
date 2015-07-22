@@ -11,6 +11,9 @@ AC_PROG_MAKE_SET
 
 AC_LANG([C++])
 
+dnl Use c++11
+AX_CXX_COMPILE_STDCXX_11
+
 AC_ISC_POSIX
 AC_PROG_CC
 AC_PROG_CXX
@@ -62,7 +65,7 @@ else
 fi
 
 dnl Check for wreport
-PKG_CHECK_MODULES(WREPORT, [libwreport >= 2.0])
+PKG_CHECK_MODULES(WREPORT, [libwreport >= 3.0])
 
 dnl Check for NetCDF
 dnl pkg-config has conflicting cflags across distros, requiring includes in the

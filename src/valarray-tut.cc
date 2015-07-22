@@ -24,6 +24,8 @@
 #include <tests/tests.h>
 #include <wreport/error.h>
 #include <wreport/bulletin.h>
+#include <wreport/vartable.h>
+#include <wreport/tableinfo.h>
 #include <cstdio>
 #include <netcdf.h>
 
@@ -42,7 +44,7 @@ struct valarray_shar
 
     valarray_shar()
     {
-        table = Vartable::get("B0000000000000014000");
+        table = Vartable::get_bufr(BufrTableID(0, 0, 0, 14, 0));
         ensure(table);
     }
 
@@ -56,7 +58,7 @@ template<> template<>
 void to::test<1>()
 {
     Var var(table->query(WR_VAR(0, 1, 1)));
-    auto_ptr<ValArray> arr(ValArray::make_singlevalarray(Namer::DT_DATA, var.info()));
+    unique_ptr<ValArray> arr(ValArray::make_singlevalarray(Namer::DT_DATA, var.info()));
     // TODO
 }
 
@@ -68,7 +70,7 @@ void to::test<2>()
     LoopInfo loopinfo;
     // Multidimensional variable
     Var var(table->query(WR_VAR(0, 1, 15)));
-    auto_ptr<ValArray> arr(ValArray::make_multivalarray(Namer::DT_DATA, var.info(), loopinfo));
+    unique_ptr<ValArray> arr(ValArray::make_multivalarray(Namer::DT_DATA, var.info(), loopinfo));
     arr->name = "TEST";
     arr->mnemo = "TEST";
     arr->rcnt = 0;
