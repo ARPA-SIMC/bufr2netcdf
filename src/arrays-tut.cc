@@ -19,6 +19,7 @@
 
 #include "arrays.h"
 #include "options.h"
+#include "ncoutfile.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
 #include <wreport/bulletin.h>
@@ -52,13 +53,12 @@ static void read_bufr(Arrays& a, const std::string& testname)
         error_system::throwf("cannot open %s", srcfile.c_str());
 
     string rawmsg;
-    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
     while (BufrBulletin::read(infd, rawmsg, srcfile.c_str()))
     {
         // Decode the BUFR message
-        bulletin->decode(rawmsg);
+        unique_ptr<BufrBulletin> bulletin = bulletin->decode(rawmsg);
         // Add contents to the various data arrays
-        a.add(*bulletin);
+        a.add(move(bulletin));
     }
 
     fclose(infd);
@@ -212,6 +212,24 @@ void to::test<3>()
 
     //p.print(stderr);
 
+}
+
+// Test IntArray
+template<> template<>
+void to::test<4>()
+{
+    IntArray test("test");
+    test.add(42);
+    test.add_missing();
+    test.add(123);
+
+    Options options;
+    NCOutfile out(options);
+    out.open("test.nc");
+    test.define(out);
+    out.end_define_mode();
+    test.putvar(out);
+    out.close();
 }
 
 }

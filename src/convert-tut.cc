@@ -100,21 +100,22 @@ struct Convtest
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : long_name : VALUES : ");
 
         // Uncontroversial
-        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CODE.TABLE <> CODE TABLE [0-9]+");
-        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : FLAG_TABLE <> FLAG TABLE [0-9]+");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CODE.TABLE <> CODE TABLE +[0-9]+");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : FLAG_TABLE <> FLAG TABLE +[0-9]+");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CCITT.IA5 <> CCITTIA5");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : DEGREE_TRUE <> DEGREE TRUE");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : PART_PER_THO <> PART PER THOUSAND");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : LOG\\(1/M\\*\\*2\\) <> LOG \\(1/M2\\)");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : 1/S <> Hz");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : DB <> dB");
+        ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : M\\*\\*\\(2/3\\)/S <> m\\*\\*\\(2/3\\)/S");
     }
 
     void make_netcdf()
     {
         // Create output file
         Options options;
-        auto_ptr<Outfile> outfile = Outfile::get(options);
+        unique_ptr<Outfile> outfile = Outfile::get(options);
         outfile->open(tmpfile);
 
         // Convert source file

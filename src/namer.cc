@@ -185,12 +185,12 @@ const char* Namer::type_name(DataType type)
     return type_names[type];
 }
 
-auto_ptr<Namer> Namer::get(const Options& opts)
+unique_ptr<Namer> Namer::get(const Options& opts)
 {
     if (opts.use_mnemonic)
-        return auto_ptr<Namer>(new MnemoNamer);
+        return unique_ptr<Namer>(new MnemoNamer);
     else
-        return auto_ptr<Namer>(new PlainNamer);
+        return unique_ptr<Namer>(new PlainNamer);
 }
 
 }

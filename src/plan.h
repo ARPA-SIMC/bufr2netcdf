@@ -146,6 +146,12 @@ struct Plan
 {
     const Options& opts;
     std::vector<plan::Section*> sections;
+    /**
+     * Varinfo describing qbits variables.
+     *
+     * This is stored here to guarantee it the same lifetime as the plan.
+     */
+    wreport::_Varinfo qbits_info;
 
     Plan(const Options& opts);
     ~Plan();

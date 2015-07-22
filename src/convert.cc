@@ -55,26 +55,24 @@ void read_bufr(const std::string& fname, BufrSink& out)
 void read_bufr(FILE* in, BufrSink& out, const char* fname)
 {
     string rawmsg;
-    auto_ptr<BufrCodecOptions> codec_opts(BufrCodecOptions::create());
-    auto_ptr<BufrBulletin> bulletin(BufrBulletin::create());
-
+    unique_ptr<BufrCodecOptions> codec_opts(BufrCodecOptions::create());
     codec_opts->decode_adds_undef_attrs = true;
-    bulletin->codec_options = codec_opts.get();
 
-    while (BufrBulletin::read(in, rawmsg, fname))
+    off_t offset;
+    while (BufrBulletin::read(in, rawmsg, fname, &offset))
     {
         // Decode the BUFR message
-        bulletin->decode(rawmsg);
+        unique_ptr<BufrBulletin> bulletin = BufrBulletin::decode(rawmsg, *codec_opts, fname, offset);
 
-        out.add_bufr(*bulletin);
+        out.add_bufr(move(bulletin), rawmsg);
     }
 }
 
 Dispatcher::Key::Key(const wreport::BufrBulletin& bulletin)
 {
-    type = bulletin.type;
-    subtype = bulletin.subtype;
-    localsubtype = bulletin.localsubtype;
+    type = bulletin.data_category;
+    subtype = bulletin.data_subcategory;
+    localsubtype = bulletin.data_subcategory_local;
     datadesc = bulletin.datadesc;
 }
 
@@ -119,7 +117,9 @@ std::string Dispatcher::get_fname(const wreport::BufrBulletin& bulletin)
         base = base.substr(0, base.size() - 3);
 
     char catstr[40];
-    snprintf(catstr, 40, "-%d-%d-%d", bulletin.type, bulletin.subtype, bulletin.localsubtype);
+    snprintf(catstr, 40, "-%d-%d-%d",
+            bulletin.data_category, bulletin.data_subcategory,
+            bulletin.data_subcategory_local);
     base += catstr;
 
     string cand = base + ".nc";
@@ -141,7 +141,7 @@ Outfile& Dispatcher::get_outfile(const wreport::BufrBulletin& bulletin)
         return *(i->second);
     else
     {
-        auto_ptr<Outfile> out = Outfile::get(opts);
+        unique_ptr<Outfile> out = Outfile::get(opts);
         Outfile& res = *out;
         out->open(get_fname(bulletin));
         outfiles.insert(make_pair(key, out.release()));
@@ -149,9 +149,9 @@ Outfile& Dispatcher::get_outfile(const wreport::BufrBulletin& bulletin)
     }
 }
 
-void Dispatcher::add_bufr(const wreport::BufrBulletin& bulletin)
+void Dispatcher::add_bufr(unique_ptr<wreport::BufrBulletin>&& bulletin, const std::string& raw)
 {
-    get_outfile(bulletin).add_bufr(bulletin);
+    get_outfile(*bulletin).add_bufr(move(bulletin), raw);
 }
 
 struct NCFiller
@@ -188,34 +188,34 @@ struct NCFiller
           s1date("section1_date"),
           s1time("section1_time")
     {
+        //arrays.debug = true;
     }
 
-    void add(const BufrBulletin& bulletin)
+    void add(unique_ptr<BufrBulletin>&& bulletin, const std::string& raw)
     {
-        arrays.add(bulletin);
-
-        for (vector<Subset>::const_iterator si = bulletin.subsets.begin();
-                si != bulletin.subsets.end(); ++si)
+        for (auto& si: bulletin->subsets)
         {
             // Add contents to the various data arrays
-            edition.add(bulletin.edition);
-            s1mtn.add(bulletin.master_table_number);
-            s1ce.add(bulletin.centre);
-            s1sc.add(bulletin.subcentre);
-            s1usn.add(bulletin.update_sequence_number);
-            s1cat.add(bulletin.type);
-            if (bulletin.subtype == 255)
+            edition.add(bulletin->edition_number);
+            s1mtn.add(bulletin->master_table_number);
+            s1ce.add(bulletin->originating_centre);
+            s1sc.add(bulletin->originating_subcentre);
+            s1usn.add(bulletin->update_sequence_number);
+            s1cat.add(bulletin->data_category);
+            if (bulletin->data_subcategory == 255)
                 s1subcat.add_missing();
             else
-                s1subcat.add(bulletin.subtype);
-            s1localsubcat.add(bulletin.localsubtype);
-            s1mtv.add(bulletin.master_table);
-            s1ltv.add(bulletin.local_table);
-            s1date.add(bulletin.rep_year * 10000 + bulletin.rep_month * 100 + bulletin.rep_day);
-            s1time.add(bulletin.rep_hour * 10000 + bulletin.rep_minute * 100 + bulletin.rep_second);
-            sec1.add(bulletin);
-            sec2.add(bulletin);
+                s1subcat.add(bulletin->data_subcategory);
+            s1localsubcat.add(bulletin->data_subcategory_local);
+            s1mtv.add(bulletin->master_table_version_number);
+            s1ltv.add(bulletin->master_table_version_number_local);
+            s1date.add(bulletin->rep_year * 10000 + bulletin->rep_month * 100 + bulletin->rep_day);
+            s1time.add(bulletin->rep_hour * 10000 + bulletin->rep_minute * 100 + bulletin->rep_second);
+            sec1.add(*bulletin, raw);
+            sec2.add(*bulletin, raw);
         }
+
+        arrays.add(move(bulletin));
     }
 
     void define(NCOutfile& outfile)
@@ -303,15 +303,15 @@ struct OutfileImpl : public Outfile
         }
     }
 
-    virtual void add_bufr(const wreport::BufrBulletin& bulletin)
+    void add_bufr(std::unique_ptr<wreport::BufrBulletin>&& bulletin, const std::string& raw) override
     {
-        filler.add(bulletin);
+        filler.add(move(bulletin), raw);
     }
 };
 
-std::auto_ptr<Outfile> Outfile::get(const Options& opts)
+std::unique_ptr<Outfile> Outfile::get(const Options& opts)
 {
-    return auto_ptr<Outfile>(new OutfileImpl(opts));
+    return unique_ptr<Outfile>(new OutfileImpl(opts));
 }
 
 }

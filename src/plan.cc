@@ -26,7 +26,9 @@
 #include "utils.h"
 //#include "mnemo.h"
 #include <wreport/var.h>
+#include <wreport/vartable.h>
 #include <wreport/bulletin.h>
+#include <wreport/bulletin/interpreter.h>
 #include <netcdf.h>
 #include <stack>
 #include <map>
@@ -66,7 +68,7 @@ void Variable::print(FILE* out)
 
 Section::Section(size_t id) : id(id), cursor(0) {}
 Section::~Section()
-{ 
+{
     for (vector<Variable*>::iterator i = entries.begin();
             i != entries.end(); ++i)
         delete *i;
@@ -154,7 +156,7 @@ struct ValueOverride
     }
 };
 
-struct PlanMaker : opcode::Visitor
+struct PlanMaker : bulletin::Interpreter
 {
     struct Section
     {
@@ -181,12 +183,12 @@ struct PlanMaker : opcode::Visitor
         {
         }
 
-        auto_ptr<ValArray> make_array(Namer::DataType type, Varinfo name_info, Varinfo type_info)
+        unique_ptr<ValArray> make_array(Namer::DataType type, Varinfo name_info, Varinfo type_info)
         {
             string name;
             string mnemo;
-            unsigned rcnt = maker.namer->name(type, name_info->var, section.id, name, mnemo);
-            auto_ptr<ValArray> arr;
+            unsigned rcnt = maker.namer->name(type, name_info->code, section.id, name, mnemo);
+            unique_ptr<ValArray> arr;
             if (section.id == 0)
                 arr.reset(ValArray::make_singlevalarray(type, type_info));
             else
@@ -199,9 +201,9 @@ struct PlanMaker : opcode::Visitor
             return arr;
         }
 
-        auto_ptr<ValArray> make_data_array(Varinfo info)
+        unique_ptr<ValArray> make_data_array(Varinfo info)
         {
-            auto_ptr<ValArray> arr = make_array(Namer::DT_DATA, info, info);
+            unique_ptr<ValArray> arr = make_array(Namer::DT_DATA, info, info);
 
             // Add references information to arr
             for (map<Varcode, const ValArray*>::const_iterator i = context.begin();
@@ -211,19 +213,18 @@ struct PlanMaker : opcode::Visitor
             return arr;
         }
 
-        auto_ptr<ValArray> make_qbits_array(Varinfo info, ValArray& master)
+        unique_ptr<ValArray> make_qbits_array(Varinfo info, ValArray& master)
         {
-            auto_ptr<ValArray> arr = make_array(Namer::DT_QBITS, info, maker.qbits_info);
+            unique_ptr<ValArray> arr = make_array(Namer::DT_QBITS, info, &maker.plan.qbits_info);
             arr->master = &master;
             master.slaves.push_back(arr.get());
             return arr;
         }
 
-        auto_ptr<ValArray> make_char_array(Varcode code)
+        unique_ptr<ValArray> make_char_array(Varcode code)
         {
-            MutableVarinfo info = MutableVarinfo::create_singleuse();
-            info->set_string(code, "C05YYY character data", WR_VAR_Y(code));
-            auto_ptr<ValArray> arr = make_array(Namer::DT_CHAR, info, info);
+            Varinfo info = maker.tables.get_chardata(code, WR_VAR_Y(code));
+            unique_ptr<ValArray> arr = make_array(Namer::DT_CHAR, info, info);
             return arr;
         }
 
@@ -233,7 +234,7 @@ struct PlanMaker : opcode::Visitor
              * Some context code invalidate others, and we need to do it right
              * away because the invalidation takes effect also for themselves
              */
-            switch (info->var)
+            switch (info->code)
             {
                 case WR_VAR(0, 4, 24):
                     context.erase(WR_VAR(0, 4, 25));
@@ -247,13 +248,13 @@ struct PlanMaker : opcode::Visitor
             section.entries.push_back(new plan::Variable);
             plan::Variable& pi = *section.entries.back();
             pi.data = make_data_array(info).release();
-            if (has_qbits && WR_VAR_F(info->var) == 0 && WR_VAR_X(info->var) != 31)
+            if (has_qbits && WR_VAR_F(info->code) == 0 && WR_VAR_X(info->code) != 31)
                 pi.qbits = make_qbits_array(info, *pi.data).release();
 
             // Update current context information
-            if (WR_VAR_F(info->var) == 0 && WR_VAR_X(info->var) < 10)
+            if (WR_VAR_F(info->code) == 0 && WR_VAR_X(info->code) < 10)
             {
-                Varcode code = info->var;
+                Varcode code = info->code;
                 if (prev_code == code)
                 {
                     // Encode the repetition count in F
@@ -299,28 +300,11 @@ struct PlanMaker : opcode::Visitor
     // Plan stack. The current plan ID is on top of the stack
     stack<Section> current_plan;
 
-    // B table used for varcode resolution
-    const Vartable* btable;
-
     // Namer used to give names to variables
     Namer* namer;
 
     // Index used in numbering loops for naming in NetCDF attributes
     unsigned loop_index;
-
-    // Varinfo describing qbits variables
-    MutableVarinfo qbits_info;
-
-    bool expect_bitmap;
-
-    /// Current value of scale change from C modifier
-    int c_scale_change;
-
-    /// Current value of width change from C modifier
-    int c_width_change;
-
-    /// Increase of scale, reference value and data width
-    int c_scale_ref_width_increase;
 
     /**
      * Current value of string length override from C08 modifiers (0 for no
@@ -329,17 +313,11 @@ struct PlanMaker : opcode::Visitor
     int c_string_len_override;
 
     PlanMaker(Plan& plan, const Bulletin& b, const Options& opts)
-        : plan(plan),
-          btable(b.btable),
+        : Interpreter(b.tables, b.datadesc),
+          plan(plan),
           namer(Namer::get(opts).release()),
-          loop_index(0),
-          qbits_info(MutableVarinfo::create_singleuse()),
-          expect_bitmap(false),
-          c_scale_change(0), c_width_change(0),
-	  c_scale_ref_width_increase(0),
-	  c_string_len_override(0)
+          loop_index(0)
     {
-        qbits_info->set(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 0, 0, 10, 0, 32);
         current_plan.push(Section(*this, plan.create_section()));
     }
 
@@ -348,134 +326,114 @@ struct PlanMaker : opcode::Visitor
         delete namer;
     }
 
-    /**
-     * Return the Varinfo describing the variable \a code, possibly altered
-     * taking into account current C modifiers
-     */
-    Varinfo get_varinfo(Varcode code)
-    {
-        Varinfo peek = btable->query(code);
-
-        if (!c_scale_change && !c_width_change && !c_string_len_override && !c_scale_ref_width_increase)
-            return peek;
-
-        int scale = peek->scale;
-        if (c_scale_change)
-            scale += c_scale_change;
-
-        int bit_len = peek->bit_len;
-        if (peek->is_string() && c_string_len_override)
-            bit_len = c_string_len_override * 8;
-        else if (c_width_change)
-            bit_len += c_width_change;
-
-        if (c_scale_ref_width_increase)
-        {
-            // TODO: misses reference value adjustment
-            scale += c_scale_ref_width_increase;
-            bit_len += (10 * c_scale_ref_width_increase + 2) / 3;
-            // c_ref *= 10**code
-        }
-
-        return btable->query_altered(code, scale, bit_len);
-    }
-
-    void c_change_data_width(Varcode code, int change)
-    {
-        c_width_change = change;
-    }
-
-    void c_change_data_scale(Varcode code, int change)
-    {
-        c_scale_change = change;
-    }
-
-    void c_increase_scale_ref_width(Varcode code, int change)
-    {
-        c_scale_ref_width_increase = change;
-    }
-
-    void c_char_data_override(Varcode code, unsigned new_length)
-    {
-        c_string_len_override = new_length;
-    }
-
-    void b_variable(Varcode code)
+    void add_var_to_plan(Varinfo info, const char* desc)
     {
         Section& s = current_plan.top();
 
         // Deal with local extensions that are not present in our tables
-        if (WR_VAR_F(code) == 0 && WR_VAR_Y(code) >= 192)
-            if (!btable->contains(code))
+        if (WR_VAR_F(info->code) == 0 && WR_VAR_Y(info->code) >= 192)
+            if (!tables.btable->contains(info->code))
                 return;
 
-        Varinfo info = get_varinfo(code);
         s.add_data(info);
 
         if (plan.opts.debug)
         {
-            fprintf(stderr, "%d%02d%03d: add variable ", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+            fprintf(stderr, "%d%02d%03d: add %s ", WR_VAR_FXY(info->code), desc);
             current_plan.top().section.entries.back()->print(stderr);
         }
     }
 
-    void c_quality_information_bitmap(Varcode code) { expect_bitmap = true; }
-
-    void c_substituted_value_bitmap(Varcode code) { expect_bitmap = true; }
-
-    void c_associated_field(Varcode code, Varcode sig_code, unsigned nbits)
+    void define_variable(Varinfo info) override
     {
-        // Toggle has_qbits flag
-        current_plan.top().has_qbits = WR_VAR_Y(code) != 0;
-        if (sig_code)
-            b_variable(sig_code);
-
-        if (plan.opts.debug)
-        {
-            if (sig_code)
-                fprintf(stderr, "%d%02d%03d: add significance variable %d\n", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code), sig_code);
-            else
-                fprintf(stderr, "%d%02d%03d: exit scope of associated field\n", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
-        }
+        add_var_to_plan(info, "variable");
     }
 
-    void c_char_data(Varcode code)
+    unsigned define_delayed_replication_factor(Varinfo info) override
+    {
+        return 1;
+    }
+
+    void define_raw_character_data(Varcode code) override
     {
         Section& s = current_plan.top();
         s.add_char(code);
 
         if (plan.opts.debug)
         {
-            fprintf(stderr, "%d%02d%03d: add character data variable\n", WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
+            fprintf(stderr, "%d%02d%03d: add character data variable\n", WR_VAR_FXY(code));
         }
     }
 
-    void c_local_descriptor(Varcode code, Varcode desc_code, unsigned nbits)
+    void c_modifier(Varcode code, Opcodes& next) override
     {
-        if (btable->contains(desc_code))
+        switch (WR_VAR_X(code))
         {
-            Varinfo info = btable->query(desc_code);
-            if (info->bit_len == WR_VAR_Y(code))
-                b_variable(desc_code);
-        }
+            case 4: {
+                /*
+                 * Add associated field.
+                 *
+                 * Precede each data element with Y bits of information. This
+                 * operation associates a data field (e.g. quality control
+                 * information) of Y bits with each data element.
+                 *
+                 * The Add Associated Field operator, whenever used, must be
+                 * immediately followed by the Class 31 Data description operator
+                 * qualifier 0 31 021 to indicate the meaning of the associated
+                 * fields.
+                 */
+                unsigned nbits = WR_VAR_Y(code);
+                Varcode sig_code = (nbits && !next.empty()) ? next.pop_left() : 0;
+                // Toggle has_qbits flag
+                current_plan.top().has_qbits = nbits != 0;
+                if (sig_code)
+                    add_var_to_plan(get_varinfo(sig_code), "associated field significance");
 
-        if (plan.opts.debug)
-        {
-            fprintf(stderr, "%d%02d%03d: add possibly unsupported variable %d%02d%03d\n",
-                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code),
-                    WR_VAR_F(desc_code), WR_VAR_X(desc_code), WR_VAR_Y(desc_code));
+                if (plan.opts.debug)
+                {
+                    if (sig_code)
+                        fprintf(stderr, "%d%02d%03d: add significance variable %d\n", WR_VAR_FXY(code), sig_code);
+                    else
+                        fprintf(stderr, "%d%02d%03d: exit scope of associated field\n", WR_VAR_FXY(code));
+                }
+                break;
+            }
+            case 6: {
+                /*
+                 * Signify data width for the immediately following local
+                 * descriptor.
+                 *
+                 * Y bits of data are described by the immediately following
+                 * descriptor.
+                 */
+                Varcode desc_code = !next.empty() ? next.pop_left() : 0;
+                // Length of next local descriptor
+                if (unsigned nbits = WR_VAR_Y(code))
+                {
+                    if (tables.btable->contains(desc_code))
+                    {
+                        Varinfo info = tables.btable->query(desc_code);
+                        if (info->bit_len == nbits)
+                            add_var_to_plan(info, "local descriptor found in our B table");
+                    }
+
+                    if (plan.opts.debug)
+                    {
+                        fprintf(stderr, "%d%02d%03d: add possibly unsupported variable %d%02d%03d\n",
+                                WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code),
+                                WR_VAR_F(desc_code), WR_VAR_X(desc_code), WR_VAR_Y(desc_code));
+                    }
+                }
+                break;
+            }
+            default:
+                bulletin::Interpreter::c_modifier(code, next);
+                break;
         }
     }
 
-    void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops)
+    void r_replication(Varcode code, Varcode delayed_code, const Opcodes& ops) override
     {
-        if (expect_bitmap)
-        {
-            // Skip the section if it's just defining a bitmap
-            expect_bitmap = false;
-            return;
-        }
-
         plan::Section& ns = plan.create_section();
         ns.loop.index = loop_index++;
 
@@ -484,11 +442,10 @@ struct PlanMaker : opcode::Visitor
             if (plan.opts.debug)
             {
                 fprintf(stderr, "%d%02d%03d: add replication variable %d%02d%03d\n",
-                    WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code),
-                    WR_VAR_F(delayed_code), WR_VAR_X(delayed_code), WR_VAR_Y(delayed_code));
+                    WR_VAR_FXY(code), WR_VAR_FXY(delayed_code));
             }
 
-            b_variable(delayed_code);
+            define_variable(get_varinfo(delayed_code));
             ns.loop.var = current_plan.top().section.entries.back()->data;
         }
 
@@ -497,24 +454,38 @@ struct PlanMaker : opcode::Visitor
         s.add_subplan(ns);
 
         if (plan.opts.debug)
-        {
-            fprintf(stderr, "%d%02d%03d: add section\n",
-                WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
-        }
+            fprintf(stderr, "%d%02d%03d: add section\n", WR_VAR_FXY(code));
 
         // Init subplan context with a fork of the parent context
         current_plan.top().context = s.context;
         current_plan.top().has_qbits = s.has_qbits;
 
-        ops.visit(*this);
+        Interpreter::r_replication(code, delayed_code, ops);
 
         if (plan.opts.debug)
-        {
-            fprintf(stderr, "%d%02d%03d: end of section\n",
-                WR_VAR_F(code), WR_VAR_X(code), WR_VAR_Y(code));
-        }
+            fprintf(stderr, "%d%02d%03d: end of section\n", WR_VAR_FXY(code));
 
         current_plan.pop();
+    }
+
+    unsigned define_bitmap_delayed_replication_factor(Varinfo info) override
+    {
+        return 0;
+    }
+
+    void define_bitmap(unsigned bitmap_size) override
+    {
+    }
+
+    //void r_bitmap(Varcode code, Varcode delayed_code, const Opcodes& ops) override
+    //{
+    //    // Skip the section if it's just defining a bitmap
+    //}
+
+    void run_r_repetition(unsigned cur, unsigned total) override
+    {
+        if (cur > 0) return;
+        Interpreter::run_r_repetition(cur, total);
     }
 
 private:
@@ -526,7 +497,11 @@ private:
 }
 
 
-Plan::Plan(const Options& opts) : opts(opts) {}
+Plan::Plan(const Options& opts) : opts(opts)
+{
+    // qbits_info.set_binary(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", 32);
+    qbits_info.set_bufr(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 0, 10, 0, 32);
+}
 
 Plan::~Plan()
 {
@@ -538,7 +513,7 @@ Plan::~Plan()
 void Plan::build(const wreport::Bulletin& bulletin)
 {
     PlanMaker pm(*this, bulletin, opts);
-    bulletin.visit_datadesc(pm);
+    pm.run();
 }
 
 plan::Section& Plan::create_section()

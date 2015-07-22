@@ -47,7 +47,7 @@ void to::test<1>()
 {
     Options opts;
     opts.use_mnemonic = false;
-    auto_ptr<Namer> n(Namer::get(opts));
+    unique_ptr<Namer> n(Namer::get(opts));
     string name, mnemo;
 
     size_t tag = 0;
@@ -71,7 +71,7 @@ void to::test<2>()
 {
     Options opts;
     opts.use_mnemonic = false;
-    auto_ptr<Namer> n(Namer::get(opts));
+    unique_ptr<Namer> n(Namer::get(opts));
     string name, mnemo;
 
     size_t tag = 0;
@@ -98,7 +98,7 @@ void to::test<3>()
 {
     Options opts;
     opts.use_mnemonic = false;
-    auto_ptr<Namer> n(Namer::get(opts));
+    unique_ptr<Namer> n(Namer::get(opts));
     string name, mnemo;
 
     size_t tag = 0;
