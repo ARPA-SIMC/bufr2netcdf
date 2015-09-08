@@ -19,7 +19,7 @@
  * Author: Enrico Zini <enrico@enricozini.com>
  */
 
-#include <wibble/tests.h>
+#include <wreport/tests.h>
 #include <string>
 
 namespace b2nc {

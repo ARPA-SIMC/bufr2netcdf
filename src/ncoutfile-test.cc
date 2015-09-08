@@ -22,62 +22,50 @@
 #include "utils.h"
 #include <tests/tests.h>
 #include <wreport/error.h>
-#include <wibble/regexp.h>
-#include <wibble/string.h>
-#include <wibble/sys/fs.h>
+#include <wreport/utils/sys.h>
 #include <netcdf.h>
 #include <cstdlib>
 
 using namespace b2nc;
 using namespace wreport;
-using namespace wibble;
+using namespace wreport::tests;
 using namespace std;
 
-namespace tut {
-
-struct ncoutfile_shar
-{
-    ncoutfile_shar()
-    {
-    }
-
-    ~ncoutfile_shar()
-    {
-    }
-};
-TESTGRP(ncoutfile);
+namespace {
 
 static const char* testfname = "test-ncoutfile.nc";
 
-// Test that ncid is -1 when the file is not open
-template<> template<>
-void to::test<1>()
+class Tests : public TestCase
 {
-    Options opts;
-    NCOutfile out(opts);
+    using TestCase::TestCase;
 
-    ensure_equals(out.ncid, -1);
-    out.open(testfname);
-    ensure(out.ncid != -1);
-    out.close();
-    ensure_equals(out.ncid, -1);
+    void register_tests() override
+    {
+        add_method("unopened", []() {
+            // Test that ncid is -1 when the file is not open
+            Options opts;
+            NCOutfile out(opts);
+
+            wassert(actual(out.ncid) == -1);
+            out.open(testfname);
+            wassert(actual(out.ncid) != -1);
+            out.close();
+            wassert(actual(out.ncid) == -1);
+        });
+
+        add_method("creation", []() {
+            // Test that the file is created if missing
+            Options opts;
+            NCOutfile out(opts);
+
+            sys::unlink_ifexists(testfname);
+
+            out.open(testfname);
+            out.close();
+
+            wassert(actual(sys::exists(testfname)).istrue());
+        });
+    }
+} tests("ncoutfile");
+
 }
-
-// Test that the file is created if missing
-template<> template<>
-void to::test<2>()
-{
-    Options opts;
-    NCOutfile out(opts);
-
-    sys::fs::deleteIfExists(testfname);
-
-    out.open(testfname);
-    out.close();
-
-    ensure(sys::fs::exists(testfname));
-}
-
-}
-
-// vim:set ts=4 sw=4:

@@ -1,7 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-if DO_TESTS
-
 #
 # nccmp comparison program
 #
@@ -28,5 +26,3 @@ noinst_HEADERS = \
 	xmalloc.h
 
 EXTRA_DIST = README
-
-endif
