@@ -21,13 +21,13 @@
 
 #include "tests/tests.h"
 #include <wreport/error.h>
-#include <wibble/string.h>
+#include <wreport/utils/string.h>
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
 
 using namespace wreport;
-using namespace wibble;
+using namespace wreport::tests;
 using namespace std;
 
 namespace b2nc {
@@ -60,26 +60,6 @@ std::string slurpfile(const std::string& name)
     fclose(fd);
 
     return res;
-}
-
-void impl_ensure_contains(const wibble::tests::Location& loc, const std::string& haystack, const std::string& needle)
-{
-    if( haystack.find(needle) == std::string::npos )
-    {
-        std::stringstream ss;
-        ss << "'" << haystack << "' does not contain '" << needle << "'";
-        throw tut::failure(loc.msg(ss.str()));
-    }
-}
-
-void impl_ensure_not_contains(const wibble::tests::Location& loc, const std::string& haystack, const std::string& needle)
-{
-    if( haystack.find(needle) != std::string::npos )
-    {
-        std::stringstream ss;
-        ss << "'" << haystack << "' must not contain '" << needle << "'";
-        throw tut::failure(loc.msg(ss.str()));
-    }
 }
 
 LocalEnv::LocalEnv(const std::string& key, const std::string& val)

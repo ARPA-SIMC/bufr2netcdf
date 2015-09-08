@@ -25,8 +25,6 @@ bufr2netcdf_LDADD = libb2nc.la $(NETCDF_LIBS) $(WREPORT_LIBS)
 # Unit testing
 #
 
-if DO_TESTS
-
 #
 # Unit tests
 #
@@ -44,19 +42,16 @@ CXXFLAGS += -O0
 noinst_HEADERS += tests/tests.h
 
 tut_test_SOURCES = \
-	mnemo-tut.cc \
-	namer-tut.cc \
-	ncoutfile-tut.cc \
-	valarray-tut.cc \
-	plan-tut.cc \
-	arrays-tut.cc \
-	convert-tut.cc \
+	mnemo-test.cc \
+	namer-test.cc \
+	ncoutfile-test.cc \
+	valarray-test.cc \
+	plan-test.cc \
+	arrays-test.cc \
+	convert-test.cc \
 	tests/tests.cc \
-	tests/tut-main.cpp
+	tests/tests-main.cpp
 tut_test_LDADD = \
 	libb2nc.la \
 	$(NETCDF_LIBS) \
-	$(WREPORT_LIBS) \
-	$(WIBBLE_LIBS)
-
-endif
+	$(WREPORT_LIBS)

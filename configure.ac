@@ -53,17 +53,6 @@ if test "$ac_cv_cxx_have_vector_data" = yes; then
  AC_DEFINE(HAVE_VECTOR_DATA,,[define if the compiler has the method std::vector::data ()])
 fi
 
-dnl Check for wibble
-PKG_CHECK_EXISTS([libwibble], [have_wibble=yes], [have_wibble=no])
-if test x$have_wibble = xyes
-then
-    PKG_CHECK_MODULES(WIBBLE,libwibble)
-    enable_tests=yes
-else
-    AC_MSG_WARN([libwibble not found, tests will be disabled])
-    enable_tests=no
-fi
-
 dnl Check for wreport
 PKG_CHECK_MODULES(WREPORT, [libwreport >= 3.0])
 
@@ -87,8 +76,6 @@ AX_CXXFLAGS_WARN_ALL
 confdir='${sysconfdir}'"/$PACKAGE"
 AC_SUBST(confdir)
 
-AM_CONDITIONAL([DO_TESTS], [test x"$enable_tests" = x"yes"])
-
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
@@ -99,6 +86,5 @@ AC_OUTPUT
 AC_MSG_NOTICE([
 ===================================================
 $PACKAGE_NAME-$PACKAGE_VERSION configuration:
-AS_HELP_STRING([tests:], [$enable_tests])
 AS_HELP_STRING([getopt_long:], [$has_getopt_long])
 ===================================================])

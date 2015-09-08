@@ -19,54 +19,42 @@
 
 #include "mnemo.h"
 #include <tests/tests.h>
-#include <wibble/string.h>
 
 using namespace b2nc;
 using namespace wreport;
-using namespace wibble;
+using namespace wreport::tests;
 using namespace std;
 
-namespace tut {
+namespace {
 
-struct mnemo_shar
+class Tests : public TestCase
 {
-    mnemo_shar()
+    using TestCase::TestCase;
+
+    void register_tests() override
     {
+        add_method("find", []() {
+            const mnemo::Table* t = mnemo::Table::get(14);
+            const char* val;
+
+            val = t->find(WR_VAR(0, 0, 0));
+            wassert(actual(val).isfalse());
+
+            val = t->find(WR_VAR(0, 0, 1));
+            wassert(actual(val) == "YTABAE");
+
+            val = t->find(WR_VAR(0, 10, 1));
+            wassert(actual(val) == "MHHA");
+
+            val = t->find(WR_VAR(0, 40, 14));
+            wassert(actual(val) == "MHFFST");
+
+            // YSUPL is hardcoded for all C05000
+            val = t->find(WR_VAR(2, 5, 0));
+            wassert(actual(val) == "YSUPL");
+        });
     }
 
-    ~mnemo_shar()
-    {
-    }
-};
-TESTGRP(mnemo);
-
-template<> template<>
-void to::test<1>()
-{
-    const mnemo::Table* t = mnemo::Table::get(14);
-    const char* val;
-
-    val = t->find(WR_VAR(0, 0, 0));
-    ensure(!val);
-
-    val = t->find(WR_VAR(0, 0, 1));
-    ensure(val);
-    ensure_equals(string(val), "YTABAE");
-
-    val = t->find(WR_VAR(0, 10, 1));
-    ensure(val);
-    ensure_equals(string(val), "MHHA");
-
-    val = t->find(WR_VAR(0, 40, 14));
-    ensure(val);
-    ensure_equals(string(val), "MHFFST");
-
-    // YSUPL is hardcoded for all C05000
-    val = t->find(WR_VAR(2, 5, 0));
-    ensure(val);
-    ensure_equals(string(val), "YSUPL");
-}
+} tests("mnemo");
 
 }
-
-// vim:set ts=4 sw=4:
