@@ -113,8 +113,9 @@ std::string Dispatcher::get_fname(const wreport::BufrBulletin& bulletin)
     string base = opts.out_fname;
 
     // Drop the trailing .nc extension if it exists
-    if (base.substr(base.size() - 3) == ".nc")
-        base = base.substr(0, base.size() - 3);
+    if (base.length() > 2)
+        if (base.substr(base.size() - 3) == ".nc")
+            base = base.substr(0, base.size() - 3);
 
     char catstr[40];
     snprintf(catstr, 40, "-%d-%d-%d",
