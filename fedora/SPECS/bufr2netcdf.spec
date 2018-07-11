@@ -1,18 +1,22 @@
+%global releaseno 1
+# Note: define _srcarchivename in Travis build only.
+%{!?srcarchivename: %global srcarchivename %{name}-%{version}-%{releaseno}}
+
 Summary: Tools to convert bufr weather reports in Netcdf file format 
 Name: bufr2netcdf
 Version: 1.4
-Release: 1
+Release: %{releaseno}%{?dist}
 License: GPL2
 Group: Applications/Meteo
-Source0: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{name}-%{version}-%{release}.tar.gz
+Source0: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{srcarchivename}.tar.gz
 URL: https://github.com/ARPA-SIMC/bufr2netcdf
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-BuildRequires: doxygen, libtool
+BuildRequires: doxygen, libtool, wreport-devel
 %description
 Tools to convert bufr weather reports in Netcdf file format in DWD standard
 
 %prep
-%setup -q -n %{name}-%{version}-%{release}
+%setup -q -n %{srcarchivename}
 sh autogen.sh
 
 %build
