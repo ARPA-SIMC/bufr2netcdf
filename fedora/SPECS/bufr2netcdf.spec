@@ -11,7 +11,8 @@ Group: Applications/Meteo
 Source0: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{srcarchivename}.tar.gz
 URL: https://github.com/ARPA-SIMC/bufr2netcdf
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-BuildRequires: doxygen, libtool, libwreport-devel, netcdf-cxx-devel
+# TODO: remove lua-devel when wreport 3.10 will be uploaded
+BuildRequires: doxygen, libtool, libwreport-devel, netcdf-cxx-devel, lua-devel
 %description
 Tools to convert bufr weather reports in Netcdf file format in DWD standard
 
