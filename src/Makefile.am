@@ -49,8 +49,7 @@ tut_test_SOURCES = \
 	plan-test.cc \
 	arrays-test.cc \
 	convert-test.cc \
-	tests/tests.cc \
-	tests/tests-main.cpp
+	tests/tests.cc
 tut_test_LDADD = \
 	libb2nc.la \
 	$(NETCDF_LIBS) \
