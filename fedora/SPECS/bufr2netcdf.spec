@@ -1,4 +1,4 @@
-%global releaseno 1
+%global releaseno 2
 # Note: define _srcarchivename in Travis build only.
 %{!?srcarchivename: %global srcarchivename %{name}-%{version}-%{releaseno}}
 
