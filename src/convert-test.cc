@@ -20,7 +20,7 @@
 #include "convert.h"
 #include "options.h"
 #include "utils.h"
-#include <tests/tests.h>
+#include "tests/tests.h"
 #include <wreport/error.h>
 #include <wreport/utils/sys.h>
 #include <netcdf.h>
