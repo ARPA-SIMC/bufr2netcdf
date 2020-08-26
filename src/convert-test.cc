@@ -342,6 +342,11 @@ class Tests : public TestCase
             Convtest t("atms2.bufr");
             t.make_netcdf();
         });
+
+        add_method("issue7", []() {
+            Convtest t("issue7.bufr");
+            t.make_netcdf();
+        });
     }
 } tests("convert");
 
