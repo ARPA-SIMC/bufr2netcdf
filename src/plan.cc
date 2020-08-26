@@ -488,6 +488,12 @@ struct PlanMaker : bulletin::Interpreter
         Interpreter::run_r_repetition(cur, total);
     }
 
+    void define_c03_refval_override(Varcode code) override
+    {
+        // Nothing to do, it should get handled in the decoder
+    }
+
+
 private:
     // Forbid copy
     PlanMaker(const PlanMaker&);

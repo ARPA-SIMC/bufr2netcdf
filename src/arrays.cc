@@ -282,6 +282,12 @@ public:
         arr.add(var, bufr_idx);
 #endif
     }
+
+    void define_c03_refval_override(Varcode code) override
+    {
+        // Nothing to do, it does not make sense in NetCDF, and it should have
+        // been handled transparently in the BUFR decoder
+    }
 };
 
 
