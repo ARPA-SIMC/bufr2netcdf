@@ -20,7 +20,7 @@
 #include "convert.h"
 #include "options.h"
 #include "utils.h"
-#include <tests/tests.h>
+#include "tests/tests.h"
 #include <wreport/error.h>
 #include <wreport/utils/sys.h>
 #include <netcdf.h>
@@ -340,6 +340,11 @@ class Tests : public TestCase
 
         add_method("atms", []() {
             Convtest t("atms2.bufr");
+            t.make_netcdf();
+        });
+
+        add_method("issue7", []() {
+            Convtest t("issue7.bufr");
             t.make_netcdf();
         });
     }
