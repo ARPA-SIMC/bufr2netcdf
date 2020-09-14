@@ -1,10 +1,10 @@
-%global releaseno 2
+%global releaseno 1
 # Note: define _srcarchivename in Travis build only.
 %{!?srcarchivename: %global srcarchivename %{name}-%{version}-%{releaseno}}
 
 Summary: Tools to convert bufr weather reports in Netcdf file format 
 Name: bufr2netcdf
-Version: 1.5
+Version: 1.6
 Release: %{releaseno}%{?dist}
 License: GPL2
 Group: Applications/Meteo
@@ -45,6 +45,8 @@ make check
 
 
 %changelog
+* Mon Sep 14 2020 Daniele Branchini <dbranchini@arpae.it> - 1.6-1%{?dist}
+- Convert BUFR messages that use C03 reference value override codes (#7)
 * Wed Aug 22 2018 Davide Cesari <dcesari@arpae.it> - 1.5-1%{dist}
 - add continuous integration
 * Thu Sep 7 2017 Daniele Branchini <dbranchini@arpae.it> - 1.4-1%{dist}
