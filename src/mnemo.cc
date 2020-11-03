@@ -77,13 +77,15 @@ void Table::load()
     FILE* in = fopen(pathname.c_str(), "rt");
     if (in == NULL)
         error_system::throwf("opening file %s", pathname.c_str());
-    char line[30];
+    char line[256];
     unsigned lineno = 1;
-    while (fgets(line, 30, in))
+    while (fgets(line, 256, in))
     {
+        if (line[0] == '#')
+            continue;
         int f, x, y;
         char name[10];
-        if (sscanf(line, " %d %d %d %9s", &f, &x, &y, name) != 4)
+        if (sscanf(line, "%01d%02d%03d\t%9s", &f, &x, &y, name) != 4)
             throw error_parse(pathname.c_str(), lineno, "line has an unknown format");
         push_back(Record(WR_VAR(f, x, y), name));
         ++lineno;

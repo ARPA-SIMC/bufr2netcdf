@@ -5,7 +5,6 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = src .
 
 dist_table_DATA = \
-	tables/mnem_000 \
 	tables/mnem_001 \
 	tables/mnem_002 \
 	tables/mnem_003 \
@@ -31,7 +30,15 @@ dist_table_DATA = \
 	tables/mnem_023 \
 	tables/mnem_024 \
 	tables/mnem_025 \
-	tables/mnem_026
+	tables/mnem_026 \
+	tables/mnem_027 \
+	tables/mnem_028 \
+	tables/mnem_029 \
+	tables/mnem_030 \
+	tables/mnem_031 \
+	tables/mnem_032 \
+	tables/mnem_033 \
+	tables/mnem_034
 
 EXTRA_DIST = ChangeLog NEWS.md run-local runtest test/bufr test/netcdf fedora/SPECS/bufr2netcdf.spec m4 \
 	     doc/bufrx2netcdf_differences.txt
