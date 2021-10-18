@@ -38,6 +38,9 @@ using namespace std;
 
 namespace b2nc {
 
+/**
+ * wreport encoder/interpreter which sends bulletin data to an Arrays object
+ */
 class ArrayBuilder : public bulletin::UncompressedEncoder
 {
 protected:

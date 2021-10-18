@@ -43,6 +43,9 @@ namespace b2nc {
 struct Options;
 struct NCOutfile;
 
+/**
+ * Constructs and holds NetCDF arrays from BUFR bulletins
+ */
 struct Arrays
 {
     // Coversion strategy object that also holds the variables that are being
@@ -79,7 +82,15 @@ struct Arrays
      */
     void add(std::unique_ptr<wreport::Bulletin>&& bulletin);
 
+    /**
+     * Define variables for these arrays on a NetCDF file in define mode
+     */
     bool define(NCOutfile& outfile);
+
+    /**
+     * Write the values of the various NetCDF variables that were colleced, to
+     * a NetCDF file in data mode
+     */
     void putvar(NCOutfile& outfile) const;
 
     void dump(FILE* out);
@@ -102,6 +113,9 @@ struct Sections
     void putvar(NCOutfile& outfile) const;
 };
 
+/**
+ * Integer NetCDF variable, used to store values from BUFR metadata
+ */
 struct IntArray
 {
     std::string name;

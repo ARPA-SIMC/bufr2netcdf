@@ -30,6 +30,12 @@ namespace b2nc {
 
 struct Options;
 
+/**
+ * Compute NetCDF variable names for their corresponding BUFR variables.
+ *
+ * This is an abstract interface: implementations are in namer.cc and chosen
+ * depending on configuration.
+ */
 struct Namer
 {
     enum Type {

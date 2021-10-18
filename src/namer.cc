@@ -167,6 +167,9 @@ public:
     }
 };
 
+/**
+ * Name variables using DWD mnemonic tables
+ */
 struct MnemoNamer : public PlainNamer
 {
     virtual unsigned name(DataType type, Varcode code, size_t tag, std::string& name, std::string& mnemo)

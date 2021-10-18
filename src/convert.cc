@@ -155,6 +155,10 @@ void Dispatcher::add_bufr(unique_ptr<wreport::BufrBulletin>&& bulletin, const st
     get_outfile(*bulletin).add_bufr(move(bulletin), raw);
 }
 
+/**
+ * Collect data from BUFR bulletins, organise them in NetCDF-style arrays, and
+ * write a NetCDF file with the resulting arrays
+ */
 struct NCFiller
 {
     Arrays arrays;

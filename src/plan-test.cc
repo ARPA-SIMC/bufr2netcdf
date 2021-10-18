@@ -20,7 +20,7 @@
 #include "plan.h"
 #include "options.h"
 #include "valarray.h"
-#include <tests/tests.h>
+#include "tests/tests.h"
 #include <wreport/error.h>
 #include <wreport/bulletin.h>
 #include <cstdio>
