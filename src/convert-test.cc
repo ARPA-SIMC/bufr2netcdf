@@ -116,6 +116,14 @@ struct Convtest
         // TODO: see if importing WMO tables from XML brings matching long names
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : long_name : VALUES : ");
 
+        // See https://github.com/ARPA-SIMC/bufr2netcdf/issues/10
+        ignore_list.add("^DIFFER : TYPE OF VARIABLE \"MLAH\" : FLOAT <> DOUBLE");
+        ignore_list.add("^DIFFER : TYPE OF VARIABLE \"MLOH\" : FLOAT <> DOUBLE");
+        ignore_list.add("^DIFFER : TYPES : VARIABLE : MLAH : FLOAT <> DOUBLE");
+        ignore_list.add("^DIFFER : TYPES : VARIABLE : MLOH : FLOAT <> DOUBLE");
+        ignore_list.add("^DIFFER : TYPES : ATTRIBUTE : _FillValue : VARIABLE : MLAH : FLOAT <> DOUBLE");
+        ignore_list.add("^DIFFER : TYPES : ATTRIBUTE : _FillValue : VARIABLE : MLOH : FLOAT <> DOUBLE");
+
         // Uncontroversial
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : CODE.TABLE <> CODE TABLE( +[0-9]+)?");
         ignore_list.add("^DIFFER : VARIABLE : [A-Z0-9]+ : ATTRIBUTE : units : VALUES : FLAG_TABLE <> FLAG TABLE( +[0-9]+)?");

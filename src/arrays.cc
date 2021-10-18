@@ -602,14 +602,13 @@ void IntArray::add_missing()
 
 bool IntArray::define(NCOutfile& outfile)
 {
-    int ncid = outfile.ncid;
     int bufrdim = outfile.dim_bufr_records;
 
     if (values.empty()) return false;
     nc_varid = outfile.def_var(name.c_str(), NC_INT, 1, &bufrdim);
 
     int missing = NC_FILL_INT;
-    int res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
+    int res = nc_put_att_int(outfile.ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
     error_netcdf::throwf_iferror(res, "creating _FillValue attribute in %s", name.c_str());
 
     return true;

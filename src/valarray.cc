@@ -38,13 +38,39 @@ template<typename TYPE>
 static inline TYPE nc_fill() { throw error_consistency("requested fill value for unknown type"); }
 template<> inline int nc_fill() { return NC_FILL_INT; }
 template<> inline float nc_fill() { return NC_FILL_FLOAT; }
+template<> inline double nc_fill() { return NC_FILL_DOUBLE; }
 template<> inline std::string nc_fill() { return string(); }
 
 template<typename TYPE>
 static inline nc_type get_nc_type() { throw error_consistency("requested type const value for unknown type"); }
 template<> inline nc_type get_nc_type<int>() { return NC_INT; }
 template<> inline nc_type get_nc_type<float>() { return NC_FLOAT; }
+template<> inline nc_type get_nc_type<double>() { return NC_DOUBLE; }
 template<> inline nc_type get_nc_type<std::string>() { return NC_CHAR; }
+
+template<typename TYPE>
+static inline void nc_put_att(int ncid, int nc_varid, const char* name, const TYPE& value) { throw error_consistency("nc_put_att called for unknown type"); }
+template<> inline void nc_put_att<std::string>(int ncid, int nc_varid, const char* name, const std::string& value)
+{
+    int res = nc_put_att_text(ncid, nc_varid, name, 1, value.c_str());
+    error_netcdf::throwf_iferror(res, "setting %s text attribute", name);
+}
+template<> inline void nc_put_att<int>(int ncid, int nc_varid, const char* name, const int& value)
+{
+    int res = nc_put_att_int(ncid, nc_varid, name, NC_INT, 1, &value);
+    error_netcdf::throwf_iferror(res, "setting %s int attribute", name);
+}
+template<> inline void nc_put_att<float>(int ncid, int nc_varid, const char* name, const float& value)
+{
+    int res = nc_put_att_float(ncid, nc_varid, name, NC_FLOAT, 1, &value);
+    error_netcdf::throwf_iferror(res, "setting %s float attribute", name);
+}
+template<> inline void nc_put_att<double>(int ncid, int nc_varid, const char* name, const double& value)
+{
+    int res = nc_put_att_double(ncid, nc_varid, name, NC_DOUBLE, 1, &value);
+    error_netcdf::throwf_iferror(res, "setting %s double attribute", name);
+}
+
 
 void LoopInfo::define(NCOutfile& outfile, size_t size)
 {
@@ -65,33 +91,9 @@ struct BaseValArray : public ValArray
 {
     BaseValArray(Varinfo info) : ValArray(info) {}
 
-    void add_common_attributes(int ncid)
+    virtual void add_common_attributes(int ncid)
     {
         int res;
-        switch (info->type)
-        {
-            case Vartype::String:
-            {
-                char missing = NC_FILL_CHAR;
-                res = nc_put_att_text(ncid, nc_varid, "_FillValue", 1, &missing);
-                break;
-            }
-            case Vartype::Integer:
-            {
-                int missing = NC_FILL_INT;
-                res = nc_put_att_int(ncid, nc_varid, "_FillValue", NC_INT, 1, &missing);
-                break;
-            }
-            case Vartype::Decimal:
-            {
-                float missing = NC_FILL_FLOAT;
-                res = nc_put_att_float(ncid, nc_varid, "_FillValue", NC_FLOAT, 1, &missing);
-                break;
-            }
-            default:
-                error_unimplemented::throwf("cannot export variable of type '%s'", vartype_format(info->type));
-        }
-        error_netcdf::throwf_iferror(res, "setting _FillValue attribute for %s", name.c_str());
 
         res = nc_put_att_text(ncid, nc_varid, "long_name", strlen(info->desc), info->desc);
         error_netcdf::throwf_iferror(res, "setting long_name attribute for %s", name.c_str());
@@ -184,19 +186,32 @@ struct BaseValArray : public ValArray
 };
 
 template<typename TYPE>
-struct SingleValArray : public BaseValArray
+struct TypedValArray : public BaseValArray
+{
+    using BaseValArray::BaseValArray;
+
+    void add_common_attributes(int ncid) override
+    {
+        TYPE missing = nc_fill<TYPE>();
+        nc_put_att(ncid, nc_varid, "_FillValue", missing);
+        BaseValArray::add_common_attributes(ncid);
+    }
+};
+
+template<typename TYPE>
+struct SingleValArray : public TypedValArray<TYPE>
 {
     std::vector<TYPE> vars;
     TYPE last_val;
 
-    SingleValArray(Varinfo info) : BaseValArray(info), last_val(nc_fill<TYPE>()) {}
+    SingleValArray(Varinfo info) : TypedValArray<TYPE>(info), last_val(nc_fill<TYPE>()) {}
 
     size_t get_size() const { return vars.size(); }
     size_t get_max_rep() const { return 1; }
 
     bool has_values() const
     {
-        if (!is_constant) return true;
+        if (!this->is_constant) return true;
         if (vars.empty()) return false;
         return vars[0] != nc_fill<TYPE>();
     }
@@ -212,13 +227,13 @@ struct SingleValArray : public BaseValArray
 
         if (is_first)
             last_val = vars[bufr_idx];
-        else if (is_constant && last_val != vars[bufr_idx])
-            is_constant = false;
+        else if (this->is_constant && last_val != vars[bufr_idx])
+            this->is_constant = false;
     }
 
     Var get_var(unsigned bufr_idx, unsigned rep) const
     {
-        Var res(info);
+        Var res(this->info);
         if (rep == 0 && bufr_idx < vars.size() && vars[bufr_idx] != nc_fill<TYPE>())
             res.set(vars[bufr_idx]);
         return res;
@@ -230,7 +245,7 @@ struct SingleValArray : public BaseValArray
         {
             Var var = get_var(i, 0);
             string formatted = var.format();
-            fprintf(out, "%s[%zd]: %s\n", name.c_str(), i, formatted.c_str());
+            fprintf(out, "%s[%zd]: %s\n", this->name.c_str(), i, formatted.c_str());
         }
     }
 };
@@ -299,7 +314,30 @@ struct SingleFloatValArray : public SingleNumberArray<float>
         for (unsigned i = 0; i < vars.size(); ++i)
             temp[i] = vars[i];
         int res = nc_put_vara_float(outfile.ncid, nc_varid, start, count, temp);
-        error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
+        error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
+        delete temp;
+#endif
+    }
+};
+
+struct SingleDoubleValArray : public SingleNumberArray<double>
+{
+    SingleDoubleValArray(Varinfo info) : SingleNumberArray<double>(info) {}
+
+    void putvar(NCOutfile& outfile) const
+    {
+        if (vars.empty()) return;
+        size_t start[] = {0};
+        size_t count[] = {vars.size()};
+#ifdef HAVE_VECTOR_DATA
+        int res = nc_put_vara_double(outfile.ncid, nc_varid, start, count, vars.data());
+        error_netcdf::throwf_iferror(res, "storing %zd double values", vars.size());
+#else
+        double* temp = new double[vars.size()];
+        for (unsigned i = 0; i < vars.size(); ++i)
+            temp[i] = vars[i];
+        int res = nc_put_vara_double(outfile.ncid, nc_varid, start, count, temp);
+        error_netcdf::throwf_iferror(res, "storing %zd double values", vars.size());
         delete temp;
 #endif
     }
@@ -361,18 +399,18 @@ struct SingleStringValArray : public SingleValArray<std::string>
 
 
 template<typename TYPE>
-struct MultiValArray : public BaseValArray
+struct MultiValArray : public TypedValArray<TYPE>
 {
     std::vector< std::vector<TYPE> > arrs;
     LoopInfo& loopinfo;
     TYPE last_val;
 
     MultiValArray(Varinfo info, LoopInfo& loopinfo)
-        : BaseValArray(info), loopinfo(loopinfo), last_val(nc_fill<TYPE>()) {}
+        : TypedValArray<TYPE>(info), loopinfo(loopinfo), last_val(nc_fill<TYPE>()) {}
 
     bool has_values() const
     {
-        if (!is_constant) return true;
+        if (!this->is_constant) return true;
         // Look for one value
         for (typename std::vector< std::vector<TYPE> >::const_iterator i = arrs.begin();
                 i != arrs.end(); ++i)
@@ -398,13 +436,13 @@ struct MultiValArray : public BaseValArray
 
         if (is_first)
             last_val = arrs[bufr_idx].back();
-        else if (is_constant && last_val != arrs[bufr_idx].back())
-            is_constant = false;
+        else if (this->is_constant && last_val != arrs[bufr_idx].back())
+            this->is_constant = false;
     }
 
     Var get_var(unsigned bufr_idx, unsigned rep=0) const
     {
-        Var res(info);
+        Var res(this->info);
         if (bufr_idx < arrs.size() && rep < arrs[bufr_idx].size() && arrs[bufr_idx][rep] != nc_fill<TYPE>())
             res.set(arrs[bufr_idx][rep]);
         return res;
@@ -449,7 +487,7 @@ struct MultiValArray : public BaseValArray
             {
                 Var var = get_var(a, i);
                 string formatted = var.format();
-                fprintf(out, "%s[%zd,%zd]: %s\n", name.c_str(), a, i, formatted.c_str());
+                fprintf(out, "%s[%zd,%zd]: %s\n", this->name.c_str(), a, i, formatted.c_str());
             }
     }
 };
@@ -559,6 +597,30 @@ struct MultiFloatValArray : public MultiNumberValArray<float>
     }
 };
 
+struct MultiDoubleValArray : public MultiNumberValArray<double>
+{
+    MultiDoubleValArray(Varinfo info, LoopInfo& loopinfo)
+        : MultiNumberValArray<double>(info, loopinfo) {}
+
+    void putvar(NCOutfile& outfile) const
+    {
+        if (arrs.empty()) return;
+
+        size_t arrsize = get_max_rep();
+        size_t start[] = {0, 0};
+        size_t count[] = {1, arrsize};
+        double clean_vals[arrsize];
+
+        for (unsigned i = 0; i < arrs.size(); ++i)
+        {
+            const double* to_nc = to_fixed_array(i, clean_vals, arrsize);
+            start[0] = i;
+            int res = nc_put_vara_double(outfile.ncid, nc_varid, start, count, to_nc);
+            error_netcdf::throwf_iferror(res, "storing %zd values", arrsize);
+        }
+    }
+};
+
 struct MultiStringValArray : public MultiValArray<std::string>
 {
     MultiStringValArray(Varinfo info, LoopInfo& loopinfo)
@@ -639,7 +701,11 @@ ValArray* ValArray::make_singlevalarray(Namer::DataType type, Varinfo info)
                 case Vartype::Integer:
                     return new SingleIntValArray(info);
                 case Vartype::Decimal:
-                    return new SingleFloatValArray(info);
+                    // Hardcoding as prototype for addressing https://github.com/ARPA-SIMC/bufr2netcdf/issues/10
+                    if (info->code == WR_VAR(0, 5, 1) or info->code == WR_VAR(0, 6, 1))
+                        return new SingleDoubleValArray(info);
+                    else
+                        return new SingleFloatValArray(info);
                 default:
                     error_unimplemented::throwf("cannot export variables of type '%s'", vartype_format(info->type));
             }
@@ -664,7 +730,11 @@ ValArray* ValArray::make_multivalarray(Namer::DataType type, Varinfo info, LoopI
                 case Vartype::Integer:
                     return new MultiIntValArray(info, loopinfo);
                 case Vartype::Decimal:
-                    return new MultiFloatValArray(info, loopinfo);
+                    // Hardcoding as prototype for addressing https://github.com/ARPA-SIMC/bufr2netcdf/issues/10
+                    if (info->code == WR_VAR(0, 5, 1) or info->code == WR_VAR(0, 6, 1))
+                        return new MultiDoubleValArray(info, loopinfo);
+                    else
+                        return new MultiFloatValArray(info, loopinfo);
                 default:
                     error_unimplemented::throwf("cannot export variables of type '%s'", vartype_format(info->type));
             }
