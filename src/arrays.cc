@@ -219,7 +219,7 @@ public:
     }
     */
 
-    void encode_var(Varinfo info, const Var& var)
+    void encode_var(Varinfo info, const Var& var) override
     {
         if (WR_VAR_F(var.code()) == 2 && WR_VAR_X(var.code()) == 6)
             // Skip unknown local descriptors
