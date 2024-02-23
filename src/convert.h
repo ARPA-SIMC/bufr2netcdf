@@ -107,6 +107,7 @@ protected:
         int type;
         int subtype;
         int localsubtype;
+        int master_table_version_number;
         std::vector<wreport::Varcode> datadesc;
 
         Key(const wreport::BufrBulletin& bulletin);

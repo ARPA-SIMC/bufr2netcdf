@@ -69,11 +69,12 @@ void read_bufr(FILE* in, BufrSink& out, const char* fname)
 }
 
 Dispatcher::Key::Key(const wreport::BufrBulletin& bulletin)
+    : type(bulletin.data_category),
+      subtype(bulletin.data_subcategory),
+      localsubtype(bulletin.data_subcategory_local),
+      master_table_version_number(bulletin.master_table_version_number),
+      datadesc(bulletin.datadesc)
 {
-    type = bulletin.data_category;
-    subtype = bulletin.data_subcategory;
-    localsubtype = bulletin.data_subcategory_local;
-    datadesc = bulletin.datadesc;
 }
 
 bool Dispatcher::Key::operator<(const Key& v) const
@@ -84,6 +85,8 @@ bool Dispatcher::Key::operator<(const Key& v) const
     if (subtype > v.subtype) return false;
     if (localsubtype < v.localsubtype) return true;
     if (localsubtype > v.localsubtype) return false;
+    if (master_table_version_number < v.master_table_version_number) return true;
+    if (master_table_version_number > v.master_table_version_number) return false;
     return datadesc < v.datadesc;
 }
 
