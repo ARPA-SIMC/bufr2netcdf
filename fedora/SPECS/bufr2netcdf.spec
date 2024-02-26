@@ -4,7 +4,7 @@
 
 Summary: Tools to convert bufr weather reports in Netcdf file format 
 Name: bufr2netcdf
-Version: 1.6
+Version: 1.7
 Release: %{releaseno}%{?dist}
 License: GPL2
 Group: Applications/Meteo
@@ -45,6 +45,11 @@ make check
 
 
 %changelog
+* Mon Feb 26 2024 Daniele Branchini <dbranchini@arpae.it> - 1.7-1%{?dist}
+- Discriminate messages by BUFR table version numbers, to avoid conflicts
+  between messages with the same Data Descriptor Section but which expand to
+  different data structures (#11, #13)
+- Use doubles for latitude and longitude (#10)
 * Mon Sep 14 2020 Daniele Branchini <dbranchini@arpae.it> - 1.6-1%{?dist}
 - Convert BUFR messages that use C03 reference value override codes (#7)
 * Wed Aug 22 2018 Davide Cesari <dcesari@arpae.it> - 1.5-1%{dist}
