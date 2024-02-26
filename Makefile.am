@@ -40,5 +40,5 @@ dist_table_DATA = \
 	tables/mnem_033 \
 	tables/mnem_034
 
-EXTRA_DIST = ChangeLog NEWS.md run-local runtest test/bufr test/netcdf fedora/SPECS/bufr2netcdf.spec m4 \
+EXTRA_DIST = NEWS.md run-local runtest test/bufr test/netcdf fedora/SPECS/bufr2netcdf.spec m4 \
 	     doc/bufrx2netcdf_differences.txt
