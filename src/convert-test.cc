@@ -156,6 +156,8 @@ struct Convtest
 
         // Compare results
         const char* nccmp = getenv("B2NC_NCCMP");
+        if (!nccmp)
+            nccmp = "./nccmp";
         wassert(actual(nccmp).istrue());
         wassert(actual(sys::access(nccmp, X_OK)).istrue());
         char cmd[1024];

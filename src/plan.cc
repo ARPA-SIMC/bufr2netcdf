@@ -349,7 +349,7 @@ struct PlanMaker : bulletin::Interpreter
         add_var_to_plan(info, "variable");
     }
 
-    unsigned define_delayed_replication_factor(Varinfo info) override
+    unsigned define_delayed_replication_factor(Varinfo) override
     {
         return 1;
     }
@@ -468,12 +468,12 @@ struct PlanMaker : bulletin::Interpreter
         current_plan.pop();
     }
 
-    unsigned define_bitmap_delayed_replication_factor(Varinfo info) override
+    unsigned define_bitmap_delayed_replication_factor(Varinfo) override
     {
         return 0;
     }
 
-    void define_bitmap(unsigned bitmap_size) override
+    void define_bitmap(unsigned) override
     {
     }
 
@@ -488,7 +488,7 @@ struct PlanMaker : bulletin::Interpreter
         Interpreter::run_r_repetition(cur, total);
     }
 
-    void define_c03_refval_override(Varcode code) override
+    void define_c03_refval_override(Varcode) override
     {
         // Nothing to do, it should get handled in the decoder
     }
@@ -547,8 +547,8 @@ void Plan::print(FILE* out) const
 {
     for (size_t i = 0; i < sections.size(); ++i)
     {
-        fprintf(stderr, "Section %zd:\n", i);
-        sections[i]->print(stderr);
+        fprintf(out, "Section %zu:\n", i);
+        sections[i]->print(out);
     }
 }
 

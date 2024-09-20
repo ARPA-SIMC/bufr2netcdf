@@ -272,7 +272,7 @@ struct OutfileImpl : public Outfile
     NCFiller filler;
     NCOutfile ncout;
 
-    OutfileImpl(const Options& opts)
+    explicit OutfileImpl(const Options& opts)
         : filler(opts), ncout(opts)
     {
     }
@@ -282,12 +282,12 @@ struct OutfileImpl : public Outfile
         close();
     }
 
-    void open(const std::string& fname)
+    void open(const std::string& fname) override
     {
         ncout.open(fname);
     }
 
-    void close()
+    void close() override
     {
         if (ncout.ncid == -1)
             return;

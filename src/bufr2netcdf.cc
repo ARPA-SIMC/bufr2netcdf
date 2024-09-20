@@ -14,7 +14,7 @@ using namespace b2nc;
 using namespace wreport;
 using namespace std;
 
-void usage(FILE* out)
+static void usage(FILE* out)
 {
     fprintf(out, "Usage: bufr2netcdf [options] file[s]\n");
     fprintf(out, "Convert BUFR files to NetCDF according to COSMO conventions\n");
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
                 break;
             case 'D':
                 options.debug = true;
-                // debug includes verbose, so fall through into it
+                [[fallthrough]]; // debug includes verbose, so fall through into it
             case 'v':
                 options.verbose = true;
                 break;

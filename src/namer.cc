@@ -124,7 +124,7 @@ public:
         table = mnemo::Table::get(14);
     }
 
-    virtual unsigned name(DataType type, Varcode code, size_t tag, std::string& name, std::string& mnemo)
+    unsigned name(DataType type, Varcode code, size_t tag, std::string& name, std::string& mnemo) override
     {
         // Get/create counter for this tag
         Counter& counter = counters[type].get_counter(tag);
@@ -172,7 +172,7 @@ public:
  */
 struct MnemoNamer : public PlainNamer
 {
-    virtual unsigned name(DataType type, Varcode code, size_t tag, std::string& name, std::string& mnemo)
+    unsigned name(DataType type, Varcode code, size_t tag, std::string& name, std::string& mnemo) override
     {
         unsigned index = PlainNamer::name(type, code, tag, name, mnemo);
         if (!mnemo.empty())

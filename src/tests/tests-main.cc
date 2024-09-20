@@ -6,12 +6,12 @@
 #include <cstring>
 #include <exception>
 
-void signal_to_exception(int)
+static void signal_to_exception(int)
 {
     throw std::runtime_error("killing signal catched");
 }
 
-int main(int argc,const char* argv[])
+int main(int, const char**)
 {
     using namespace wreport::tests;
 

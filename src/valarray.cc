@@ -26,6 +26,7 @@
 #include "plan.h"
 #include <wreport/error.h>
 #include <wreport/var.h>
+#include <wreport/utils/sys.h>
 #include <netcdf.h>
 #include <cstring>
 
@@ -75,7 +76,7 @@ template<> inline void nc_put_att<double>(int ncid, int nc_varid, const char* na
 void LoopInfo::define(NCOutfile& outfile, size_t size)
 {
     char dn[20];
-    snprintf(dn, 20, "Loop_%03d_maxlen", index);
+    snprintf(dn, 20, "Loop_%03u_maxlen", index);
     int res = nc_def_dim(outfile.ncid, dn, size, &nc_dimid);
     error_netcdf::throwf_iferror(res, "creating %s dimension", dn);
 }
@@ -89,7 +90,7 @@ namespace {
 
 struct BaseValArray : public ValArray
 {
-    BaseValArray(Varinfo info) : ValArray(info) {}
+    explicit BaseValArray(Varinfo info) : ValArray(info) {}
 
     virtual void add_common_attributes(int ncid)
     {
@@ -142,7 +143,7 @@ struct BaseValArray : public ValArray
         // Refrences attributes
         if (!references.empty())
         {
-            int ref_codes[references.size()];
+            sys::TempBuffer<int> ref_codes(references.size());
             unsigned rsize = 0;
             for (size_t i = 0; i < references.size(); ++i)
             {
@@ -204,19 +205,19 @@ struct SingleValArray : public TypedValArray<TYPE>
     std::vector<TYPE> vars;
     TYPE last_val;
 
-    SingleValArray(Varinfo info) : TypedValArray<TYPE>(info), last_val(nc_fill<TYPE>()) {}
+    explicit SingleValArray(Varinfo info) : TypedValArray<TYPE>(info), last_val(nc_fill<TYPE>()) {}
 
-    size_t get_size() const { return vars.size(); }
-    size_t get_max_rep() const { return 1; }
+    size_t get_size() const override { return vars.size(); }
+    size_t get_max_rep() const override { return 1; }
 
-    bool has_values() const
+    bool has_values() const override
     {
         if (!this->is_constant) return true;
         if (vars.empty()) return false;
         return vars[0] != nc_fill<TYPE>();
     }
 
-    void add(const Var& var, unsigned bufr_idx=0)
+    void add(const Var& var, unsigned bufr_idx=0) override
     {
         bool is_first = vars.empty();
 
@@ -231,7 +232,7 @@ struct SingleValArray : public TypedValArray<TYPE>
             this->is_constant = false;
     }
 
-    Var get_var(unsigned bufr_idx, unsigned rep) const
+    Var get_var(unsigned bufr_idx, unsigned rep) const override
     {
         Var res(this->info);
         if (rep == 0 && bufr_idx < vars.size() && vars[bufr_idx] != nc_fill<TYPE>())
@@ -239,13 +240,13 @@ struct SingleValArray : public TypedValArray<TYPE>
         return res;
     }
 
-    void dump(FILE* out)
+    void dump(FILE* out) override
     {
         for (size_t i = 0; i < vars.size(); ++i)
         {
             Var var = get_var(i, 0);
             string formatted = var.format();
-            fprintf(out, "%s[%zd]: %s\n", this->name.c_str(), i, formatted.c_str());
+            fprintf(out, "%s[%zu]: %s\n", this->name.c_str(), i, formatted.c_str());
         }
     }
 };
@@ -253,9 +254,9 @@ struct SingleValArray : public TypedValArray<TYPE>
 template<typename TYPE>
 struct SingleNumberArray : public SingleValArray<TYPE>
 {
-    SingleNumberArray(Varinfo info) : SingleValArray<TYPE>(info) {}
+    explicit SingleNumberArray(Varinfo info) : SingleValArray<TYPE>(info) {}
 
-    bool define(NCOutfile& outfile)
+    bool define(NCOutfile& outfile) override
     {
         int bufrdim = outfile.dim_bufr_records;
 
@@ -276,9 +277,9 @@ struct SingleNumberArray : public SingleValArray<TYPE>
 
 struct SingleIntValArray : public SingleNumberArray<int>
 {
-    SingleIntValArray(Varinfo info) : SingleNumberArray<int>(info) {}
+    explicit SingleIntValArray(Varinfo info) : SingleNumberArray<int>(info) {}
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (vars.empty()) return;
         size_t start[] = {0};
@@ -292,16 +293,16 @@ struct SingleIntValArray : public SingleNumberArray<int>
             temp[i] = vars[i];
         int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, temp);
         error_netcdf::throwf_iferror(res, "storing %zd integer values", vars.size());
-        delete temp;
+        delete[] temp;
 #endif
     }
 };
 
 struct SingleFloatValArray : public SingleNumberArray<float>
 {
-    SingleFloatValArray(Varinfo info) : SingleNumberArray<float>(info) {}
+    explicit SingleFloatValArray(Varinfo info) : SingleNumberArray<float>(info) {}
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (vars.empty()) return;
         size_t start[] = {0};
@@ -315,16 +316,16 @@ struct SingleFloatValArray : public SingleNumberArray<float>
             temp[i] = vars[i];
         int res = nc_put_vara_float(outfile.ncid, nc_varid, start, count, temp);
         error_netcdf::throwf_iferror(res, "storing %zd float values", vars.size());
-        delete temp;
+        delete[] temp;
 #endif
     }
 };
 
 struct SingleDoubleValArray : public SingleNumberArray<double>
 {
-    SingleDoubleValArray(Varinfo info) : SingleNumberArray<double>(info) {}
+    explicit SingleDoubleValArray(Varinfo info) : SingleNumberArray<double>(info) {}
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (vars.empty()) return;
         size_t start[] = {0};
@@ -338,16 +339,16 @@ struct SingleDoubleValArray : public SingleNumberArray<double>
             temp[i] = vars[i];
         int res = nc_put_vara_double(outfile.ncid, nc_varid, start, count, temp);
         error_netcdf::throwf_iferror(res, "storing %zd double values", vars.size());
-        delete temp;
+        delete[] temp;
 #endif
     }
 };
 
 struct SingleStringValArray : public SingleValArray<std::string>
 {
-    SingleStringValArray(Varinfo info) : SingleValArray<std::string>(info) {}
+    explicit SingleStringValArray(Varinfo info) : SingleValArray<std::string>(info) {}
 
-    bool define(NCOutfile& outfile)
+    bool define(NCOutfile& outfile) override
     {
         int ncid = outfile.ncid;
 
@@ -370,15 +371,15 @@ struct SingleStringValArray : public SingleValArray<std::string>
         return true;
     }
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (vars.empty()) return;
 
         size_t start[] = {0, 0};
         size_t count[] = {1, info->len};
-        char missing[info->len]; // Missing value
+        sys::TempBuffer<char> missing(info->len); // Missing value
         memset(missing, NC_FILL_CHAR, info->len);
-        char value[info->len]; // Space-padded value
+        sys::TempBuffer<char> value(info->len); // Space-padded value
         for (size_t i = 0; i < vars.size(); ++i)
         {
             int res;
@@ -408,7 +409,7 @@ struct MultiValArray : public TypedValArray<TYPE>
     MultiValArray(Varinfo info, LoopInfo& loopinfo)
         : TypedValArray<TYPE>(info), loopinfo(loopinfo), last_val(nc_fill<TYPE>()) {}
 
-    bool has_values() const
+    bool has_values() const override
     {
         if (!this->is_constant) return true;
         // Look for one value
@@ -420,7 +421,7 @@ struct MultiValArray : public TypedValArray<TYPE>
         return false;
     }
 
-    void add(const wreport::Var& var, unsigned bufr_idx)
+    void add(const wreport::Var& var, unsigned bufr_idx) override
     {
         // Ensure we have the right number of dimensions
         while (bufr_idx >= arrs.size())
@@ -440,7 +441,7 @@ struct MultiValArray : public TypedValArray<TYPE>
             this->is_constant = false;
     }
 
-    Var get_var(unsigned bufr_idx, unsigned rep=0) const
+    Var get_var(unsigned bufr_idx, unsigned rep=0) const override
     {
         Var res(this->info);
         if (bufr_idx < arrs.size() && rep < arrs[bufr_idx].size() && arrs[bufr_idx][rep] != nc_fill<TYPE>())
@@ -448,12 +449,12 @@ struct MultiValArray : public TypedValArray<TYPE>
         return res;
     }
 
-    size_t get_size() const
+    size_t get_size() const override
     {
         return arrs.size();
     }
 
-    size_t get_max_rep() const
+    size_t get_max_rep() const override
     {
         size_t res = 0;
         for (typename std::vector< std::vector<TYPE> >::const_iterator i = this->arrs.begin();
@@ -465,7 +466,7 @@ struct MultiValArray : public TypedValArray<TYPE>
         return res;
     }
 
-    bool define(NCOutfile& outfile)
+    bool define(NCOutfile& outfile) override
     {
         // Skip variable if it's never been found
         if (this->arrs.empty())
@@ -480,7 +481,7 @@ struct MultiValArray : public TypedValArray<TYPE>
     }
 
 
-    void dump(FILE* out)
+    void dump(FILE* out) override
     {
         for (size_t a = 0; a < arrs.size(); ++a)
             for (size_t i = 0; i < arrs[a].size(); ++i)
@@ -498,7 +499,7 @@ struct MultiNumberValArray : public MultiValArray<TYPE>
     MultiNumberValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiValArray<TYPE>(info, loopinfo) {}
 
-    bool define(NCOutfile& outfile)
+    bool define(NCOutfile& outfile) override
     {
         if (!MultiValArray<TYPE>::define(outfile))
             return false;
@@ -554,14 +555,14 @@ struct MultiIntValArray : public MultiNumberValArray<int>
     MultiIntValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiNumberValArray<int>(info, loopinfo) {}
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (arrs.empty()) return;
 
         size_t arrsize = get_max_rep();
         size_t start[] = {0, 0};
         size_t count[] = {1, arrsize};
-        int clean_vals[arrsize];
+        sys::TempBuffer<int> clean_vals(arrsize);
 
         for (unsigned i = 0; i < arrs.size(); ++i)
         {
@@ -578,14 +579,14 @@ struct MultiFloatValArray : public MultiNumberValArray<float>
     MultiFloatValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiNumberValArray<float>(info, loopinfo) {}
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (arrs.empty()) return;
 
         size_t arrsize = get_max_rep();
         size_t start[] = {0, 0};
         size_t count[] = {1, arrsize};
-        float clean_vals[arrsize];
+        sys::TempBuffer<float> clean_vals(arrsize);
 
         for (unsigned i = 0; i < arrs.size(); ++i)
         {
@@ -602,14 +603,14 @@ struct MultiDoubleValArray : public MultiNumberValArray<double>
     MultiDoubleValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiNumberValArray<double>(info, loopinfo) {}
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (arrs.empty()) return;
 
         size_t arrsize = get_max_rep();
         size_t start[] = {0, 0};
         size_t count[] = {1, arrsize};
-        double clean_vals[arrsize];
+        sys::TempBuffer<double> clean_vals(arrsize);
 
         for (unsigned i = 0; i < arrs.size(); ++i)
         {
@@ -626,7 +627,7 @@ struct MultiStringValArray : public MultiValArray<std::string>
     MultiStringValArray(Varinfo info, LoopInfo& loopinfo)
         : MultiValArray<std::string>(info, loopinfo) {}
 
-    bool define(NCOutfile& outfile)
+    bool define(NCOutfile& outfile) override
     {
         if (!MultiValArray<std::string>::define(outfile))
             return false;
@@ -652,7 +653,7 @@ struct MultiStringValArray : public MultiValArray<std::string>
         return true;
     }
 
-    void putvar(NCOutfile& outfile) const
+    void putvar(NCOutfile& outfile) const override
     {
         if (arrs.empty()) return;
 
@@ -660,10 +661,10 @@ struct MultiStringValArray : public MultiValArray<std::string>
         size_t start[] = {0, 0, 0};
         size_t count[] = {1, 1, info->len};
 
-        char missing[info->len]; // Missing value
+        sys::TempBuffer<char> missing(info->len); // Missing value
         memset(missing, NC_FILL_CHAR, info->len);
 
-        char value[info->len]; // Space-padded value
+        sys::TempBuffer<char> value(info->len); // Space-padded value
         for (size_t i = 0; i < arrs.size(); ++i)
         {
             const vector<string>& v = arrs[i];

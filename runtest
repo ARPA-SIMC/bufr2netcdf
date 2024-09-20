@@ -1,14 +1,13 @@
 #!/bin/sh -e
 
-TOP_SRCDIR=`pwd`/`dirname $0`
-CMD=`pwd`/"$1"
+TOP_SRCDIR=$(readlink -f $(dirname $0))
+CMD=$(readlink -f "$1")
 
 #
 # Set up the test environment
 #
 
 export B2NC_TESTDATA=$TOP_SRCDIR/test
-export B2NC_NCCMP=$TOP_SRCDIR/src/nccmp/nccmp
 export B2NC_TABLES="$TOP_SRCDIR/tables"
 TESTDIR="`mktemp -d`"
 cd "$TESTDIR"
@@ -26,23 +25,12 @@ trap cleanup EXIT
 # Try to debug the libtool executable, if present
 DIR=`dirname $CMD`
 BASE=`basename $CMD`
-if [ ! -z "$DEBUGGER" ] && [ -x $DIR/.libs/lt-$BASE ]
+echo "Running $DEBUGGER $CMD $ARGS"
+RES=0
+if ! $DEBUGGER $CMD $ARGS
 then
-	echo "Running $DEBUGGER $DIR/.libs/lt-$BASE $ARGS"
-	RES=0
-	if ! $DEBUGGER $DIR/.libs/lt-$BASE $ARGS
-	then
-		RES=$?
-		echo "Failed with result $RES"
-	fi
-else
-	echo "Running $DEBUGGER $CMD $ARGS"
-	RES=0
-	if !  $DEBUGGER $CMD $ARGS
-	then
-		RES=$?
-		echo "Failed with result $RES"
-	fi
+	RES=$?
+	echo "Failed with result $RES"
 fi
 
 
