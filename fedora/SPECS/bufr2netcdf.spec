@@ -4,7 +4,7 @@
 
 Summary: Tools to convert bufr weather reports in Netcdf file format 
 Name: bufr2netcdf
-Version: 1.7
+Version: 1.8
 Release: %{releaseno}%{?dist}
 License: GPL2
 Group: Applications/Meteo
@@ -45,6 +45,8 @@ Tools to convert BUFR weather reports in NetCDF file format in DWD standard
 
 
 %changelog
+* Tue Sep 24 2024 Daniele Branchini <dbranchini@arpae.it> - 1.8-1%{?dist}
+- Porting to meson and to c++17
 * Mon Feb 26 2024 Daniele Branchini <dbranchini@arpae.it> - 1.7-1%{?dist}
 - Discriminate messages by BUFR table version numbers, to avoid conflicts
   between messages with the same Data Descriptor Section but which expand to
