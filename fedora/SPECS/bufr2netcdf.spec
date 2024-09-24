@@ -12,7 +12,7 @@ Source0: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{releaseno}.t
 URL: https://github.com/ARPA-SIMC/bufr2netcdf
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 BuildRequires: doxygen
-BuildRequires: libtool
+BuildRequires: meson
 BuildRequires: gcc-c++
 BuildRequires: libwreport-devel
 BuildRequires: netcdf-cxx-devel
@@ -22,16 +22,16 @@ Tools to convert BUFR weather reports in NetCDF file format in DWD standard
 
 %prep
 %setup -q -n %{srcarchivename}
-sh autogen.sh
 
 %build
-%configure
-make
-make check
+%meson
+%meson_build
+
+%check
+%meson_test
 
 %install
-[ "%{buildroot}" != / ] && rm -rf %{buildroot}
-%makeinstall
+%meson_install
 
 %clean
 [ "%{buildroot}" != / ] && rm -rf %{buildroot}
