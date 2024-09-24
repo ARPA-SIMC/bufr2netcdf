@@ -29,6 +29,7 @@
 #include <wreport/bulletin.h>
 //#include <wreport/bulletin/buffers.h>
 #include <wreport/bulletin/internals.h>
+#include <wreport/utils/sys.h>
 #include <netcdf.h>
 #include <stack>
 #include <cstring>
@@ -249,7 +250,7 @@ public:
         cur_section.top()->cursor++;
     }
 
-    unsigned define_bitmap_delayed_replication_factor(Varinfo info) override
+    unsigned define_bitmap_delayed_replication_factor(Varinfo) override
     {
         const Var& var = peek_var();
         return var.info()->len;
@@ -267,7 +268,7 @@ public:
         }
     }
 
-    void define_raw_character_data(Varcode code) override
+    void define_raw_character_data(Varcode) override
     {
         const Var& var = get_var();
         plan::Variable& v = cur_section.top()->current();
@@ -286,7 +287,7 @@ public:
 #endif
     }
 
-    void define_c03_refval_override(Varcode code) override
+    void define_c03_refval_override(Varcode) override
     {
         // Nothing to do, it does not make sense in NetCDF, and it should have
         // been handled transparently in the BUFR decoder
@@ -465,7 +466,7 @@ void Arrays::putvar(NCOutfile& outfile) const
     if (date_year && date_month && date_day)
     {
         size_t size = date_year->get_size();
-        int values[size];
+        sys::TempBuffer<int> values(size);
         for (size_t i = 0; i < size; ++i)
         {
             Var vy = date_year->get_var(i, 0);
@@ -486,7 +487,7 @@ void Arrays::putvar(NCOutfile& outfile) const
     if (time_hour)
     {
         size_t size = time_hour->get_size();
-        int values[size];
+        sys::TempBuffer<int> values(size);
         for (size_t i = 0; i < size; ++i)
         {
             Var th = time_hour->get_var(i, 0);
@@ -566,7 +567,7 @@ void Sections::putvar(NCOutfile& outfile) const
 
     size_t start[] = {0, 0};
     size_t count[] = {1, 0};
-    unsigned char missing[max_length]; // Missing value
+    sys::TempBuffer<unsigned char> missing(max_length); // Missing value
     memset(missing, NC_FILL_BYTE, max_length);
     for (size_t i = 0; i < values.size(); ++i)
     {
@@ -628,7 +629,7 @@ void IntArray::putvar(NCOutfile& outfile) const
         temp[i] = values[i];
     int res = nc_put_vara_int(outfile.ncid, nc_varid, start, count, temp);
     error_netcdf::throwf_iferror(res, "storing %zd integer values", values.size());
-    delete temp;
+    delete[] temp;
 #endif
 }
 

@@ -20,67 +20,22 @@
 #ifndef COMMON_H
 #define COMMON_H 1
 
-#if HAVE_CONFIG_H
-#   include <config.h>
-#endif
-
 #include <stdio.h>
-
-#if HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
-
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-
-#if STDC_HEADERS
-#   include <stdlib.h>
-#   include <stddef.h>
-#else
-#   if HAVE_STDLIB_H
-#     include <stdlib.h>
-#   endif
-#endif /*STDC_HEADERS*/
-
-#if HAVE_STRING_H
-#   if !STDC_HEADERS && HAVE_MEMORY_H
-#     include <memory.h>
-#   endif
-#   include <string.h>
-#endif
-
-#if HAVE_STRINGS_H
-#   include <strings.h>
-#endif
-
-#if HAVE_UNISTD_H
-#   include <unistd.h>
-#endif
-
-#if HAVE_ERRNO_H
-#   include <errno.h>
-#endif /*HAVE_ERRNO_H*/
-
-#ifndef errno
-extern int errno;
-#endif
-
+#include <stdlib.h>
+#include <stddef.h>
+#include <memory.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <errno.h>
 #include "xmalloc.h"
+#include <limits.h>
+#include <inttypes.h>
 
-#if HAVE_LIMITS_H
-#   include <limits.h>
-#endif
-
-#if HAVE_INTTYPES_H
-#   include <inttypes.h>
-#endif
-
-#define EXIT_SUCCESS        0     
+#define EXIT_SUCCESS        0
 #define EXIT_DIFFER         1
 #define EXIT_FATAL          2
 #define EXIT_FAILED         3

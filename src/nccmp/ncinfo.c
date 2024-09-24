@@ -18,6 +18,8 @@
 */
 
 #include "ncinfo.h"
+#include "strlist.h"
+#include "nccmp.h"
 
 int ncnonrecvars(int ncid, char** list, int nlist)
 {

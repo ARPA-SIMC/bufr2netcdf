@@ -51,6 +51,9 @@ void getvarinfo(int ncid, varstruct* vars, int* nvars);
 void type2string(nc_type type, char* str);
 int excludevars(int ncid1, int ncid2, char** finallist,
                 int nfinal, char** excludelist, int nexclude);
-
+int allvarnames(char** list, int nvars);
+int findvar(char * name, varstruct *vars);
+int cmpattval(int nc1, int nc2, int varid1, int varid2, char* name, int len, nc_type type);
+int hasrecdim(int* dimids, int ndims, int recid);
 
 #endif /* !NCCMP_H */

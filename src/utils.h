@@ -37,9 +37,9 @@ struct error_netcdf : public wreport::error
     error_netcdf(int ncerr, const std::string& msg);
     ~error_netcdf() throw () {}
 
-    wreport::ErrorCode code() const throw () { return (wreport::ErrorCode)101; }
+    wreport::ErrorCode code() const throw () override { return (wreport::ErrorCode)101; }
 
-    virtual const char* what() const throw () { return msg.c_str(); }
+    virtual const char* what() const throw () override { return msg.c_str(); }
 
     /// Throw the exception, building the message printf-style
     static void throwf(int ncerr, const char* fmt, ...) WREPORT_THROWF_ATTRS(2, 3);

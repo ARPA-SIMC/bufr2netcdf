@@ -28,7 +28,7 @@ using namespace std;
 
 namespace b2nc {
 
-NCOutfile::NCOutfile(const Options& opts)
+NCOutfile::NCOutfile(const Options&)
     : ncid(-1), dim_bufr_records(-1) {}
 
 NCOutfile::~NCOutfile()

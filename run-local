@@ -1,8 +1,0 @@
-#!/bin/bash
-
-TOP_SRCDIR=$(readlink -f $(dirname $0))
-
-export PATH="$TOP_SRCDIR/src:$PATH"
-export B2NC_TABLES="$TOP_SRCDIR/tables"
-
-exec "$@"
