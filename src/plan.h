@@ -151,7 +151,7 @@ struct Plan
      *
      * This is stored here to guarantee it the same lifetime as the plan.
      */
-    wreport::_Varinfo qbits_info;
+    wreport::Varinfo qbits_info;
 
     Plan(const Options& opts);
     ~Plan();

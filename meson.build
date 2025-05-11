@@ -52,7 +52,7 @@ endif
 toplevel_inc = include_directories('.')
 
 # Dependencies
-libwreport_dep = dependency('libwreport', version: '>= 3.38')
+libwreport_dep = dependency('libwreport', version: '>= 3.40')
 netcdf_dep = dependency('netcdf')
 
 # Generate the builddir's version of run-local

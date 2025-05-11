@@ -215,7 +215,7 @@ struct PlanMaker : bulletin::Interpreter
 
         unique_ptr<ValArray> make_qbits_array(Varinfo info, ValArray& master)
         {
-            unique_ptr<ValArray> arr = make_array(Namer::DT_QBITS, info, &maker.plan.qbits_info);
+            unique_ptr<ValArray> arr = make_array(Namer::DT_QBITS, info, maker.plan.qbits_info);
             arr->master = &master;
             master.slaves.push_back(arr.get());
             return arr;
@@ -506,7 +506,7 @@ private:
 Plan::Plan(const Options& opts) : opts(opts)
 {
     // qbits_info.set_binary(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", 32);
-    qbits_info.set_bufr(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 0, 10, 0, 32);
+    qbits_info=varinfo_create_bufr(WR_VAR(0, 33, 0), "Q-BITS FOR FOLLOWING VALUE", "CODE TABLE", 32);
 }
 
 Plan::~Plan()
@@ -514,6 +514,7 @@ Plan::~Plan()
     for (vector<plan::Section*>::iterator i = sections.begin();
             i != sections.end(); ++i)
         delete *i;
+    varinfo_delete(std::move(qbits_info));
 }
 
 void Plan::build(const wreport::Bulletin& bulletin)
